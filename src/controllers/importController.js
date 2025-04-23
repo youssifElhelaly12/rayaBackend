@@ -77,6 +77,7 @@ exports.uploadCSV = (req, res, next) => {
                                 phone: row.phone,
                                 email: row.email,
                                 title: row.title,
+                                company: row.company,
                             });
                         } catch (error) {
                             errors.push({ row, error: error.message });
