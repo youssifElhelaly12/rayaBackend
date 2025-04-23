@@ -9,7 +9,7 @@ A Node.js backend API built with Express and MySQL, featuring user authenticatio
 - Role-based access control
 - User CRUD operations
 - Error handling
-- MySQL database with Sequelize ORM
+- MySQL databadse with Sequelize ORM
 
 ## Prerequisites
 
