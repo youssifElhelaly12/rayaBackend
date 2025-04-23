@@ -22,8 +22,10 @@
         "morgan": "^1.10.0",
         "multer": "^1.4.5-lts.2",
         "mysql2": "^3.6.5",
+        "netlify-cli": "^20.0.3",
         "nodemailer": "^6.10.1",
         "sequelize": "^6.35.1",
+        "serverless": "^4.14.1",
         "winston": "^3.11.0"
     },
     "devDependencies": {
