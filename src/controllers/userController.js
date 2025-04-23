@@ -88,14 +88,15 @@ exports.deleteUser = async (req, res, next) => {
 
 exports.createUser = async (req, res) => {
     try {
-        const { email, firstName, lastName, phone, title, comment } = req.body;
+        const { email, firstName, lastName, phone, title, comment, company } = req.body;
         const user = await User.create({
             email,
             firstName,
             lastName,
             phone,
             title,
-            comment
+            comment,
+            company
         });
         res.status(201).json(user);
     } catch (error) {
