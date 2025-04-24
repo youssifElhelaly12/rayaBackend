@@ -1,6 +1,16 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-
+const path = require('path');
+const fs = require('fs');
+const nodemailer = require('nodemailer');
+const fileExists = (filePath) => {
+    try {
+        return fs.existsSync(filePath);
+    } catch (error) {
+        console.error(`Error checking if file exists: ${filePath}`, error);
+        return false;
+    }
+};
 const generateToken = (user) => {
     return jwt.sign(
         { id: user.id, role: user.role },
@@ -8,7 +18,21 @@ const generateToken = (user) => {
         { expiresIn: '24h' }
     );
 };
+const replaceTemplateVariables = (template, user) => {
+    return template
+        .replace(/{{firstName}}/g, user.firstName || '')
+};
 
+const templatePath = path.join(__dirname, '../scripts/html', 'verfiy.html');
+const emailTemplate = fs.readFileSync(templatePath, 'utf8');
+// Define paths to image assets
+const imagesDir = path.join(__dirname, '../scripts/html/images');
+const summitBannerPath = path.join(imagesDir, 'summit-banner.jpg');
+const eventDetailsPath = path.join(imagesDir, 'event-details.png');
+const emailConfig = {
+    user: 'rayait_events@rayacorp.com',
+    pass: 'MyBMv@Z9eaPWYZN'
+};
 exports.register = async (req, res, next) => {
     try {
         const { username, email, password } = req.body;
@@ -40,7 +64,20 @@ exports.register = async (req, res, next) => {
 
 exports.invalidateToken = async (req, res, next) => {
     try {
-        const { token , currentUser } = req.body;
+        const transporter = nodemailer.createTransport({
+            host: 'smtp.office365.com',
+            port: 587,
+            secure: false,  // Using STARTTLS
+            tls: {
+                ciphers: 'SSLv3'
+            },
+            auth: {
+                user: emailConfig.user,
+                pass: emailConfig.pass
+            },
+            debug: true  // Enable debug output
+        });
+        const { token, currentUser } = req.body;
         if (!token) {
             return res.status(400).json({ message: 'Token is required' });
         }
@@ -53,7 +90,7 @@ exports.invalidateToken = async (req, res, next) => {
         }
 
         await User.update({
-            
+
             tokenInvalidated: true,
             comment: currentUser.comment,
             title: currentUser.title,
@@ -61,6 +98,60 @@ exports.invalidateToken = async (req, res, next) => {
         }, {
             where: { id: user.id }
         });
+        const personalizedContent = replaceTemplateVariables(emailTemplate, user, token);
+
+        // Read image files with proper validation
+        let summitBannerContent, eventDetailsContent;
+
+        // Check if summit banner image exists before reading
+        if (fileExists(summitBannerPath)) {
+            try {
+                summitBannerContent = fs.readFileSync(summitBannerPath);
+            } catch (error) {
+                console.error('Error reading summit banner image:', error.message);
+            }
+        } else {
+            console.warn(`Summit banner image not found at: ${summitBannerPath}`);
+        }
+
+        // Check if event details image exists before reading
+        if (fileExists(eventDetailsPath)) {
+            try {
+                eventDetailsContent = fs.readFileSync(eventDetailsPath);
+            } catch (error) {
+                console.error('Error reading event details image:', error.message);
+            }
+        } else {
+            console.warn(`Event details image not found at: ${eventDetailsPath}`);
+        }
+        // Prepare attachments array
+        const attachments = [];
+
+        // Only add images that were successfully loaded
+        if (summitBannerContent) {
+            attachments.push({
+                filename: 'summit-banner.jpg',
+                content: summitBannerContent,
+                cid: 'summit-banner@techforward.com' // Same CID value as in the HTML img tag
+            });
+        }
+
+        if (eventDetailsContent) {
+            attachments.push({
+                filename: 'event-details.png',
+                content: eventDetailsContent,
+                cid: 'event-details@techforward.com' // Same CID value as in the HTML img tag
+            });
+        }
+
+        const mailOptions = {
+            from: emailConfig.user,
+            to: user.email,
+            subject: 'RayaIT - Techforward Summit 2025 Invitation- Sharm El Sheikh 15-17 May,2025',
+            html: personalizedContent,
+            attachments: attachments
+        };
+        await transporter.sendMail(mailOptions);
 
         res.json({ message: 'Token invalidated successfully' });
     } catch (error) {

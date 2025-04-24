@@ -134,6 +134,50 @@ exports.searchUsersByEmail = async (req, res, next) => {
         next(error);
     }
 };
+
+exports.deleteAllUsers = async (req, res, next) => {
+    try {
+
+        const deletedCount = await User.destroy({
+            where: {},
+            truncate: true
+        });
+
+        res.json({
+            message: 'All users deleted successfully',
+            count: deletedCount
+        });
+    } catch (error) {
+        console.error('Error deleting all users:', error);
+        next(error);
+    }
+};
+
+exports.sendInvitationEmail = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const user = await User.findByPk(id);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Generate invitation token (you may want to use jwt or another method)
+        const invitationToken = require('crypto').randomBytes(20).toString('hex');
+
+        // Here you would typically send the email using your email service
+        // Example: await sendInvitationEmail(user.email, invitationToken);
+
+        res.json({
+            message: 'Invitation email sent successfully',
+            email: user.email
+        });
+    } catch (error) {
+        console.error('Error sending invitation email:', error);
+        next(error);
+    }
+};
+
 // Remove this duplicate export block at the bottom
 // module.exports = {
 //     getUsers,
