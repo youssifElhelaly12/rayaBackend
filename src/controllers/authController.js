@@ -147,7 +147,7 @@ exports.invalidateToken = async (req, res, next) => {
         const mailOptions = {
             from: emailConfig.user,
             to: user.email,
-            subject: 'RayaIT - Techforward Summit 2025 Invitation- Sharm El Sheikh 15-17 May,2025',
+            subject: 'RayaIT - Techforward Summit 2025 - Registration Confirmation',
             html: personalizedContent,
             attachments: attachments
         };
