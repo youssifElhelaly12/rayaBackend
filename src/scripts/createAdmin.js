@@ -8,7 +8,7 @@ async function createAdmin() {
 
         const admin = await Admin.create({
             email: 'admin@admin.com',
-            password: 'admin123'
+            password: 'y8F$Tq#92V!'
         });
 
         console.log('Admin created successfully:', admin.email);

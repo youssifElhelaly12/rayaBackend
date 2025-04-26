@@ -131,3 +131,6 @@ dist
 
 # Local Netlify folder
 .netlify
+
+# Admin creation script with credentials
+src/scripts/createAdmin.js
