@@ -12,17 +12,17 @@ const fileExists = (filePath) => {
         return false;
     }
 };
-// Email configuration
+// Email configuration from environment variables
 const emailConfig = {
-    user: 'rayait_events@rayacorp.com',
-    pass: 'MyBMv@Z9eaPWYZN'
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD
 };
 
 const sendEmail = async () => {
     try {
         const transporter = nodemailer.createTransport({
-            host: 'smtp.office365.com',
-            port: 587,
+            host: process.env.EMAIL_HOST,
+            port: parseInt(process.env.EMAIL_PORT),
             secure: false,  // Using STARTTLS
             tls: {
                 ciphers: 'SSLv3'
@@ -62,7 +62,7 @@ const generateToken = (user) => {
     // Generate a more compact token by only including essential user data
     return jwt.sign(
         { id: user.id, email: user.email },
-        process.env.JWT_SECRET || 'your-secret-key',
+        process.env.JWT_SECRET,
         { expiresIn: '30d' }
     );
 };
@@ -88,8 +88,8 @@ const replaceTemplateVariables = (template, user, token) => {
 const sendBulkEmails = async (req, res) => {
     try {
         const transporter = nodemailer.createTransport({
-            host: 'smtp.office365.com',
-            port: 587,
+            host: process.env.EMAIL_HOST,
+            port: parseInt(process.env.EMAIL_PORT),
             secure: false,  // Using STARTTLS
             tls: {
                 ciphers: 'SSLv3'
@@ -188,8 +188,8 @@ const sendSingleEmail = async (req, res) => {
         }
 
         const transporter = nodemailer.createTransport({
-            host: 'smtp.office365.com',
-            port: 587,
+            host: process.env.EMAIL_HOST,
+            port: parseInt(process.env.EMAIL_PORT),
             secure: false,
             tls: {
                 ciphers: 'SSLv3'

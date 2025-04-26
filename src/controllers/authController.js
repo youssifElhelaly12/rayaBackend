@@ -14,7 +14,7 @@ const fileExists = (filePath) => {
 const generateToken = (user) => {
     return jwt.sign(
         { id: user.id, role: user.role },
-        process.env.JWT_SECRET || 'your-secret-key',
+        process.env.JWT_SECRET,
         { expiresIn: '24h' }
     );
 };
@@ -30,8 +30,8 @@ const imagesDir = path.join(__dirname, '../scripts/html/images');
 const summitBannerPath = path.join(imagesDir, 'summit-banner.jpg');
 const eventDetailsPath = path.join(imagesDir, 'event-details.png');
 const emailConfig = {
-    user: 'rayait_events@rayacorp.com',
-    pass: 'MyBMv@Z9eaPWYZN'
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD
 };
 exports.register = async (req, res, next) => {
     try {
@@ -65,8 +65,8 @@ exports.register = async (req, res, next) => {
 exports.invalidateToken = async (req, res, next) => {
     try {
         const transporter = nodemailer.createTransport({
-            host: 'smtp.office365.com',
-            port: 587,
+            host: process.env.EMAIL_HOST,
+            port: parseInt(process.env.EMAIL_PORT),
             secure: false,  // Using STARTTLS
             tls: {
                 ciphers: 'SSLv3'
@@ -82,7 +82,7 @@ exports.invalidateToken = async (req, res, next) => {
             return res.status(400).json({ message: 'Token is required' });
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await User.findByPk(decoded.id);
 
         if (!user) {
