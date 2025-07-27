@@ -1,11 +1,5 @@
 const { Sequelize } = require('sequelize');
 
-// const sequelize = new Sequelize('raya', 'root', 'Helaly@12', {
-//     host: '127.0.0.1',
-//     port:3306,
-//     dialect: 'mysql',
-//     logging: console.log,
-// });
 const sequelize = new Sequelize('b0cycbfrtapuxhja9isi', 'ufnn41qqz7bzfxfo', 'oWCXtSz73soOAI6Sg5Yc', {
     host: 'b0cycbfrtapuxhja9isi-mysql.services.clever-cloud.com',
     port:3306,
@@ -33,8 +27,3 @@ module.exports = {
     sequelize,
     Sequelize
 };
-
-// Import models after sequelize is exported to avoid circular dependencies
-require('./User');
-require('./Tag');
-require('./associations');
