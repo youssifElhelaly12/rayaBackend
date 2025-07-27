@@ -1,7 +1,8 @@
 const express = require('express');
-const { default: sendBulkEmails } = require('../controllers/emailController');
 const router = express.Router();
+const { sendBulkEmails, sendSingleEmail } = require('../controllers/emailController');
 
-router.post('/send-emails', sendBulkEmails);
+router.post('/bulk', sendBulkEmails);
+router.post('/:userId', sendSingleEmail);
 
 module.exports = router;

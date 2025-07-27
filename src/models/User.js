@@ -50,7 +50,8 @@ const User = sequelize.define('User', {
         type: DataTypes.STRING,
         allowNull: true
     },
-    tokenInvalidated: {
+    tokenInvalidated: { 
+
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: false

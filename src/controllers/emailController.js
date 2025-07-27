@@ -4,18 +4,25 @@ import User from '../models/User.js';
 import nodemailer from 'nodemailer';
 import jwt from 'jsonwebtoken';
 import { fileURLToPath } from 'url';
-
-// Email configuration
+const fileExists = (filePath) => {
+    try {
+        return fs.existsSync(filePath);
+    } catch (error) {
+        console.error(`Error checking if file exists: ${filePath}`, error);
+        return false;
+    }
+};
+// Email configuration from environment variables
 const emailConfig = {
-    user: 'rayait_events@rayacorp.com',
-    pass: 'MyBMv@Z9eaPWYZN'
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD
 };
 
 const sendEmail = async () => {
     try {
         const transporter = nodemailer.createTransport({
-            host: 'smtp.office365.com',
-            port: 587,
+            host: process.env.EMAIL_HOST,
+            port: parseInt(process.env.EMAIL_PORT),
             secure: false,  // Using STARTTLS
             tls: {
                 ciphers: 'SSLv3'
@@ -55,7 +62,7 @@ const generateToken = (user) => {
     // Generate a more compact token by only including essential user data
     return jwt.sign(
         { id: user.id, email: user.email },
-        process.env.JWT_SECRET || 'your-secret-key',
+        process.env.JWT_SECRET,
         { expiresIn: '30d' }
     );
 };
@@ -71,15 +78,6 @@ const imagesDir = path.join(__dirname, '../scripts/html/images');
 const summitBannerPath = path.join(imagesDir, 'summit-banner.jpg');
 const eventDetailsPath = path.join(imagesDir, 'event-details.png');
 
-// Helper function to check if file exists
-const fileExists = (filePath) => {
-    try {
-        return fs.existsSync(filePath);
-    } catch (error) {
-        console.error(`Error checking if file exists: ${filePath}`, error);
-        return false;
-    }
-};
 
 const replaceTemplateVariables = (template, user, token) => {
     return template
@@ -90,8 +88,8 @@ const replaceTemplateVariables = (template, user, token) => {
 const sendBulkEmails = async (req, res) => {
     try {
         const transporter = nodemailer.createTransport({
-            host: 'smtp.office365.com',
-            port: 587,
+            host: process.env.EMAIL_HOST,
+            port: parseInt(process.env.EMAIL_PORT),
             secure: false,  // Using STARTTLS
             tls: {
                 ciphers: 'SSLv3'
@@ -180,4 +178,84 @@ const sendBulkEmails = async (req, res) => {
     }
 };
 
-export default sendBulkEmails;
+const sendSingleEmail = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const user = await User.findByPk(userId);
+
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        const transporter = nodemailer.createTransport({
+            host: process.env.EMAIL_HOST,
+            port: parseInt(process.env.EMAIL_PORT),
+            secure: false,
+            tls: {
+                ciphers: 'SSLv3'
+            },
+            auth: {
+                user: emailConfig.user,
+                pass: emailConfig.pass
+            },
+            debug: true
+        });
+
+        const token = generateToken(user);
+        const personalizedContent = replaceTemplateVariables(emailTemplate, user, token);
+
+        let summitBannerContent, eventDetailsContent;
+
+        if (fileExists(summitBannerPath)) {
+            try {
+                summitBannerContent = fs.readFileSync(summitBannerPath);
+            } catch (error) {
+                console.error('Error reading summit banner image:', error.message);
+            }
+        }
+
+        if (fileExists(eventDetailsPath)) {
+            try {
+                eventDetailsContent = fs.readFileSync(eventDetailsPath);
+            } catch (error) {
+                console.error('Error reading event details image:', error.message);
+            }
+        }
+
+        const attachments = [];
+
+        if (summitBannerContent) {
+            attachments.push({
+                filename: 'summit-banner.jpg',
+                content: summitBannerContent,
+                cid: 'summit-banner@techforward.com'
+            });
+        }
+
+        if (eventDetailsContent) {
+            attachments.push({
+                filename: 'event-details.png',
+                content: eventDetailsContent,
+                cid: 'event-details@techforward.com'
+            });
+        }
+
+        const mailOptions = {
+            from: emailConfig.user,
+            to: user.email,
+            subject: 'RayaIT - Techforward Summit 2025 Invitation- Sharm El Sheikh 15-17 May,2025',
+            html: personalizedContent,
+            attachments: attachments
+        };
+
+        await transporter.sendMail(mailOptions);
+        await user.update({ emailStatus: true, invitationLink: token });
+
+        res.status(200).json({ message: 'Email sent successfully' });
+    } catch (error) {
+        console.error('Error in sendSingleEmail:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+export { sendBulkEmails, sendSingleEmail };

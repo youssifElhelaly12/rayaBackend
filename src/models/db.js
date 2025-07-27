@@ -1,23 +1,32 @@
 const { Sequelize } = require('sequelize');
+require('dotenv').config();
 
-// const sequelize = new Sequelize('raya', 'root', 'Helaly@12', {
-//     host: '127.0.0.1',
-//     port:3306,
-//     dialect: 'mysql',
-//     logging: console.log,
-// });
-const sequelize = new Sequelize('b0cycbfrtapuxhja9isi', 'ufnn41qqz7bzfxfo', 'oWCXtSz73soOAI6Sg5Yc', {
-    host: 'b0cycbfrtapuxhja9isi-mysql.services.clever-cloud.com',
-    port:3306,
-    dialect: 'mysql',
-    logging: console.log,
+
+// Get environment variables based on current environment
+const env = process.env.NODE_ENV || 'development';
+const isProduction = env === 'production';
+
+// Select the appropriate database configuration based on environment
+const dbName = isProduction ? process.env.DB_NAME_PROD : process.env.DB_NAME_DEV;
+const dbUser = isProduction ? process.env.DB_USER_PROD : process.env.DB_USER_DEV;
+const dbPassword = isProduction ? process.env.DB_PASSWORD_PROD : process.env.DB_PASSWORD_DEV;
+const dbHost = isProduction ? process.env.DB_HOST_PROD : process.env.DB_HOST_DEV;
+const dbPort = isProduction ? process.env.DB_PORT_PROD : process.env.DB_PORT_DEV;
+const dbDialect = isProduction ? process.env.DB_DIALECT_PROD : process.env.DB_DIALECT_DEV;
+
+const sequelize = new Sequelize(dbName, dbUser, dbPassword, {
+    host: dbHost,
+    port: dbPort,
+    dialect: dbDialect,
+    logging: env === 'development' ? console.log : false,
+
 });
 
 // Test the connection and sync models
 const initDB = async () => {
     try {
         await sequelize.authenticate();
-        console.log('Database connection established successfully.');
+        console.log(`Database connection established successfully (${env} mode).`);
         await sequelize.sync({ alter: false, logging: false });
         console.log('Database schema preserved - no automatic alterations');
         console.log('Database synchronized successfully.');
