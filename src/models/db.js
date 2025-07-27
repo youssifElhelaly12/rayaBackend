@@ -1,6 +1,7 @@
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
+
 // Get environment variables based on current environment
 const env = process.env.NODE_ENV || 'development';
 const isProduction = env === 'production';
@@ -18,6 +19,7 @@ const sequelize = new Sequelize(dbName, dbUser, dbPassword, {
     port: dbPort,
     dialect: dbDialect,
     logging: env === 'development' ? console.log : false,
+
 });
 
 // Test the connection and sync models
@@ -40,3 +42,8 @@ module.exports = {
     sequelize,
     Sequelize
 };
+
+// Import models after sequelize is exported to avoid circular dependencies
+require('./User');
+require('./Tag');
+require('./associations');

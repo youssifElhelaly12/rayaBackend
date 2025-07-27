@@ -1,6 +1,5 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('./db');
-
 const User = sequelize.define('User', {
     id: {
         type: DataTypes.INTEGER,
@@ -52,6 +51,7 @@ const User = sequelize.define('User', {
         allowNull: true
     },
     tokenInvalidated: { 
+
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: false
