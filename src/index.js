@@ -24,7 +24,8 @@ if (!fs.existsSync('uploads')) {
 app.use('/api/auth', require('./routes/admin'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/import', require('./routes/import'));
-app.use('/api/email', require('./routes/emailRoutes'));  // Add this line
+app.use('/api/email', require('./routes/emailRoutes'));
+app.use('/api/tags', require('./routes/tagRoutes'));  // Add this line
 
 // Error handling
 app.use(errorHandler);
