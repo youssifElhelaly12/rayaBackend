@@ -46,6 +46,10 @@ const User = sequelize.define('User', {
         type: DataTypes.TEXT,
         allowNull: true
     },
+    company: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
     tokenInvalidated: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
