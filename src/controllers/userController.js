@@ -1,8 +1,11 @@
 const User = require('../models/User');
+const Tag = require('../models/Tag');
 
 exports.getUsers = async (req, res, next) => {
     try {
-        const users = await User.findAll();
+        const users = await User.findAll({
+            include: [{ model: Tag, as: 'tags', through: { attributes: [] } }]
+        });
 
         if (!users) {
             return res.status(500).json({ message: 'Database error occurred' });
@@ -42,11 +45,9 @@ exports.getUser = async (req, res, next) => {
 exports.updateUser = async (req, res, next) => {
     try {
         const user = await User.findByPk(req.params.id);
-
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
-
         // Check if user is updating their own data or is admin
         if (req.user.id !== user.id && req.user.role !== 'admin') {
             return res.status(403).json({ message: 'Not authorized' });
@@ -88,7 +89,7 @@ exports.deleteUser = async (req, res, next) => {
 
 exports.createUser = async (req, res) => {
     try {
-        const { email, firstName, lastName, phone, title, comment } = req.body;
+        const { email, firstName, lastName, phone, title, comment, tagId } = req.body;
         const user = await User.create({
             email,
             firstName,
@@ -97,6 +98,16 @@ exports.createUser = async (req, res) => {
             title,
             comment
         });
+
+        if (tagId) {
+            const tag = await Tag.findByPk(tagId);
+            if (!tag) {
+                await user.destroy(); // Rollback user creation if tag not found
+                return res.status(404).json({ message: 'Tag not found' });
+            }
+            await user.addTag(tag);
+        }
+
         res.status(201).json(user);
     } catch (error) {
         res.status(400).json({ error: error.message });
