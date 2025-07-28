@@ -13,7 +13,7 @@ app.use(helmet());
 app.use(morgan());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
+app.use('/uploads', express.static('uploads'));
 // Ensure uploads directory exists
 const fs = require('fs');
 if (!fs.existsSync('uploads')) {
@@ -26,6 +26,7 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/import', require('./routes/import'));
 app.use('/api/email', require('./routes/emailRoutes'));
 app.use('/api/tags', require('./routes/tagRoutes'));  // Add this line
+app.use('/api/events', require('./routes/eventRoutes'));
 
 // Error handling
 app.use(errorHandler);

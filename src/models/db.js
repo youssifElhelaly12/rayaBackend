@@ -1,4 +1,3 @@
-const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
 
@@ -13,6 +12,8 @@ const dbPassword = isProduction ? process.env.DB_PASSWORD_PROD : process.env.DB_
 const dbHost = isProduction ? process.env.DB_HOST_PROD : process.env.DB_HOST_DEV;
 const dbPort = isProduction ? process.env.DB_PORT_PROD : process.env.DB_PORT_DEV;
 const dbDialect = isProduction ? process.env.DB_DIALECT_PROD : process.env.DB_DIALECT_DEV;
+
+const { Sequelize } = require('sequelize');
 
 const sequelize = new Sequelize(dbName, dbUser, dbPassword, {
     host: dbHost,
@@ -40,7 +41,7 @@ initDB();
 
 module.exports = {
     sequelize,
-    Sequelize
+    DataTypes: Sequelize.DataTypes
 };
 
 // Import models after sequelize is exported to avoid circular dependencies
