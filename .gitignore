@@ -133,4 +133,4 @@ dist
 .netlify
 
 # Admin creation script with credentials
-src/scripts/createAdmin.js
+# src/scripts/createAdmin.js
