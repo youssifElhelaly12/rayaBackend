@@ -1,4 +1,4 @@
-const Event = require('../models/Event');
+const { Event } = require('../models/associations');
 const multer = require('multer');
 const path = require('path');
 

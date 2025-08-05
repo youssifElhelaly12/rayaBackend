@@ -1,5 +1,4 @@
-const User = require('../models/User');
-const Tag = require('../models/Tag');
+const { Tag, User } = require('../models/associations');
 
 exports.getUsers = async (req, res, next) => {
     try {

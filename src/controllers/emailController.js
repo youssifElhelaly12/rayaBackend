@@ -1,6 +1,6 @@
-import fs from 'fs';
 import path from 'path';
-import User from '../models/User.js';
+ import { User, EventEmailTemplate, Event, Tag } from '../models/associations.js';
+ import fs from 'fs';
 import nodemailer from 'nodemailer';
 import jwt from 'jsonwebtoken';
 import { fileURLToPath } from 'url';
@@ -14,14 +14,14 @@ const fileExists = (filePath) => {
 };
 // Email configuration from environment variables
 const emailConfig = {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
+    user: "youssif.elhelaly@gmail.com",
+    pass: "kkgk ubmd sekv thcs"
 };
 
 const sendEmail = async () => {
     try {
         const transporter = nodemailer.createTransport({
-            host: process.env.EMAIL_HOST,
+            service: "gmail",
             port: parseInt(process.env.EMAIL_PORT),
             secure: false,  // Using STARTTLS
             tls: {
@@ -70,8 +70,8 @@ const generateToken = (user) => {
 // Get the directory path dynamically
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const templatePath = path.join(__dirname, '../scripts/html', 'emailTemplate.html');
-const emailTemplate = fs.readFileSync(templatePath, 'utf8');
+// const templatePath = path.join(__dirname, '../scripts/html', 'emailTemplate.html');
+// const emailTemplate = fs.readFileSync(templatePath, 'utf8');
 
 // Define paths to image assets
 const imagesDir = path.join(__dirname, '../scripts/html/images');
@@ -86,27 +86,46 @@ const replaceTemplateVariables = (template, user, token) => {
 };
 
 const sendBulkEmails = async (req, res) => {
+    const { eventId, tagId } = req.body;
+
+    if (!eventId) {
+        return res.status(400).json({ message: 'EventId is required for sending bulk emails.' });
+    }
+
+    if (!tagId) {
+        return res.status(400).json({ message: 'TagId is required for sending bulk emails.' });
+    }
+
+    const eventEmailTemplateRecord = await EventEmailTemplate.findOne({ where: { EventId: eventId } });
+    if (!eventEmailTemplateRecord) {
+        return res.status(404).json({ message: 'Email template not found for the given EventId.' });
+    }
+    const eventEmailTemplate = eventEmailTemplateRecord.eventEmailTemplate;
+
+    const event = await Event.findByPk(eventId);
+    if (!event) {
+        return res.status(404).json({ message: 'Event not found for the given EventId.' });
+    }
     try {
         const transporter = nodemailer.createTransport({
-            host: process.env.EMAIL_HOST,
-            port: parseInt(process.env.EMAIL_PORT),
-            secure: false,  // Using STARTTLS
-            tls: {
-                ciphers: 'SSLv3'
-            },
+            service: "gmail",
             auth: {
-                user: emailConfig.user,
-                pass: emailConfig.pass
+                user: "youssif.elhelaly@gmail.com",
+                pass: "kkgk ubmd sekv thcs"
             },
-            debug: true  // Enable debug output
+            debug: true
         });
 
-        const users = await User.findAll();
+        const tag = await Tag.findByPk(tagId);
+        if (!tag) {
+            return res.status(404).json({ message: 'Tag not found for the given TagId.' });
+        }
+        const users = await tag.getUsers(); // Assuming a many-to-many relationship is set up with getUsers
 
         for (const user of users) {
             const token = generateToken(user);
             try {
-                const personalizedContent = replaceTemplateVariables(emailTemplate, user, token);
+                const personalizedContent = replaceTemplateVariables(eventEmailTemplate, user, token);
 
                 // Read image files with proper validation
                 let summitBannerContent, eventDetailsContent;
@@ -156,7 +175,7 @@ const sendBulkEmails = async (req, res) => {
                 const mailOptions = {
                     from: emailConfig.user,
                     to: user.email,
-                    subject: 'RayaIT - Techforward Summit 2025 Invitation- Sharm El Sheikh 15-17 May,2025',
+                    subject: event.eventName || 'Invitation', // Use event name as subject or a default
                     html: personalizedContent,
                     attachments: attachments
                 };
@@ -179,8 +198,25 @@ const sendBulkEmails = async (req, res) => {
 };
 
 const sendSingleEmail = async (req, res) => {
+    console.log(req.params);
+    const { userId, eventId } = req.params;
+
+    if (!eventId) {
+        return res.status(400).json({ message: 'EventId is required for sending a single email.' });
+    }
+
+    const eventEmailTemplateRecord = await EventEmailTemplate.findOne({ where: { EventId: eventId } });
+    if (!eventEmailTemplateRecord) {
+        return res.status(404).json({ message: 'Email template not found for the given EventId.' });
+    }
+    const eventEmailTemplate = eventEmailTemplateRecord.eventEmailTemplate;
+
+    const event = await Event.findByPk(eventId);
+    if (!event) {
+        return res.status(404).json({ message: 'Event not found for the given EventId.' });
+    }
     try {
-        const { userId } = req.params;
+
         const user = await User.findByPk(userId);
 
         if (!user) {
@@ -188,64 +224,23 @@ const sendSingleEmail = async (req, res) => {
         }
 
         const transporter = nodemailer.createTransport({
-            host: process.env.EMAIL_HOST,
-            port: parseInt(process.env.EMAIL_PORT),
-            secure: false,
-            tls: {
-                ciphers: 'SSLv3'
-            },
+            service: "gmail",
             auth: {
-                user: emailConfig.user,
-                pass: emailConfig.pass
+                user: "youssif.elhelaly@gmail.com",
+                pass: "kkgk ubmd sekv thcs"
             },
             debug: true
         });
 
         const token = generateToken(user);
-        const personalizedContent = replaceTemplateVariables(emailTemplate, user, token);
+        const personalizedContent = replaceTemplateVariables(eventEmailTemplate, user, token);
 
-        let summitBannerContent, eventDetailsContent;
-
-        if (fileExists(summitBannerPath)) {
-            try {
-                summitBannerContent = fs.readFileSync(summitBannerPath);
-            } catch (error) {
-                console.error('Error reading summit banner image:', error.message);
-            }
-        }
-
-        if (fileExists(eventDetailsPath)) {
-            try {
-                eventDetailsContent = fs.readFileSync(eventDetailsPath);
-            } catch (error) {
-                console.error('Error reading event details image:', error.message);
-            }
-        }
-
-        const attachments = [];
-
-        if (summitBannerContent) {
-            attachments.push({
-                filename: 'summit-banner.jpg',
-                content: summitBannerContent,
-                cid: 'summit-banner@techforward.com'
-            });
-        }
-
-        if (eventDetailsContent) {
-            attachments.push({
-                filename: 'event-details.png',
-                content: eventDetailsContent,
-                cid: 'event-details@techforward.com'
-            });
-        }
 
         const mailOptions = {
             from: emailConfig.user,
             to: user.email,
-            subject: 'RayaIT - Techforward Summit 2025 Invitation- Sharm El Sheikh 15-17 May,2025',
+            subject: event.eventName || 'Invitation',
             html: personalizedContent,
-            attachments: attachments
         };
 
         await transporter.sendMail(mailOptions);

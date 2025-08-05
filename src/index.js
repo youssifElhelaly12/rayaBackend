@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const { sequelize } = require('./models/db');
 const errorHandler = require('./middleware/errorHandler');
+const eventEmailTemplateRoutes = require('./routes/eventEmailTemplateRoutes');
 const app = express();
 
 // Middleware
@@ -26,11 +27,17 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/import', require('./routes/import'));
 app.use('/api/email', require('./routes/emailRoutes'));
 app.use('/api/tags', require('./routes/tagRoutes'));  // Add this line
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./swagger');
+
+app.use('/api/eventEmailTemplates', eventEmailTemplateRoutes);
 app.use('/api/events', require('./routes/eventRoutes'));
 app.get('/', (req, res) => {
     res.send('Server is running');
 });
-// Error handling
+// Swagger UI for API documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// Error handling middleware
 app.use(errorHandler);
 
 // Database connection and server start
