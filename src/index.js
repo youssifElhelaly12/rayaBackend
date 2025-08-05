@@ -27,7 +27,9 @@ app.use('/api/import', require('./routes/import'));
 app.use('/api/email', require('./routes/emailRoutes'));
 app.use('/api/tags', require('./routes/tagRoutes'));  // Add this line
 app.use('/api/events', require('./routes/eventRoutes'));
-
+app.get('/', (req, res) => {
+    res.send('Server is running');
+});
 // Error handling
 app.use(errorHandler);
 
