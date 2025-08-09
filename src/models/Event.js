@@ -20,6 +20,14 @@ module.exports = (sequelize, DataTypes) => {
       eventBannerImage: {
           type: DataTypes.STRING,
           allowNull: true,
+      },
+      apologizeContent: {
+          type: DataTypes.TEXT,
+          allowNull: true,
+      },
+      acceptedContent: {
+          type: DataTypes.TEXT,
+          allowNull: true,
       }
   });
 

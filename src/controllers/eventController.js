@@ -1,6 +1,6 @@
-const { Event } = require('../models/associations');
 const multer = require('multer');
 const path = require('path');
+const { Event, EventEmailTemplate, VerifiedEmailTemplate } = require('../models/associations');
 
 // Set up storage for uploaded images
 const storage = multer.diskStorage({
@@ -15,9 +15,10 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 module.exports = {
+  upload,
   createEvent: async (req, res) => {
     try {
-        const { eventName, eventPage } = req.body;
+        const { eventName, eventPage, apologizeContent, acceptedContent } = req.body;
         let eventBannerImage = null;
         if (req.file) {
             eventBannerImage = `/uploads/${req.file.filename}`;
@@ -26,7 +27,9 @@ module.exports = {
         const event = await Event.create({
             eventName,
             eventPage,
-            eventBannerImage
+            eventBannerImage,
+            apologizeContent,
+            acceptedContent
         });
         res.status(201).json(event);
     } catch (error) {
@@ -40,8 +43,13 @@ module.exports = {
 
   getAllEvents: async (req, res) => {
     try {
-      const events = await Event.findAll();
-      const baseUrl = 'http://localhost:3000/'; // Assuming your server runs on this base URL
+      const events = await Event.findAll({
+        include: [
+          { model: EventEmailTemplate },
+          { model: VerifiedEmailTemplate }
+        ]
+      });
+      const baseUrl = 'http://localhost:3000'; // Assuming your server runs on this base URL
       const eventsWithFullImageUrl = events.map(event => ({
         ...event.toJSON(),
         eventBannerImage: event.eventBannerImage ? `${baseUrl}${event.eventBannerImage}` : null
@@ -58,7 +66,12 @@ module.exports = {
       const { id } = req.params;
       const { eventName, eventPage, eventBannerImage } = req.body;
 
-      const event = await Event.findByPk(id);
+      const event = await Event.findByPk(id, {
+        include: [
+          { model: EventEmailTemplate },
+          { model: VerifiedEmailTemplate }
+        ]
+      });
       if (!event) {
         return res.status(404).json({ message: 'Event not found' });
       }
@@ -112,5 +125,4 @@ module.exports = {
       res.status(500).json({ message: 'Internal server error' });
     }
   },
-  upload
 };

@@ -14,7 +14,9 @@ router.get('/search', protect, searchUsersByEmail);
 
 router.route('/:id')
     .get(getUser)
-    .put(protect, updateUser)
+    .put(protect, updateUser);
+
+router.route('/delete/:id')
     .delete(protect, deleteUser);
 
 router.post('/:id/invite', protect, sendInvitationEmail);

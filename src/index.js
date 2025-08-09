@@ -6,6 +6,7 @@ const morgan = require('morgan');
 const { sequelize } = require('./models/db');
 const errorHandler = require('./middleware/errorHandler');
 const eventEmailTemplateRoutes = require('./routes/eventEmailTemplateRoutes');
+const verifiedEmailTemplateRoutes = require('./routes/verifiedEmailTemplateRoutes');
 const app = express();
 
 // Middleware
@@ -31,6 +32,7 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
 
 app.use('/api/eventEmailTemplates', eventEmailTemplateRoutes);
+app.use('/api/verifiedEmailTemplates', verifiedEmailTemplateRoutes);
 app.use('/api/events', require('./routes/eventRoutes'));
 app.get('/', (req, res) => {
     res.send('Server is running');

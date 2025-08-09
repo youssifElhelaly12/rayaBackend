@@ -1,9 +1,11 @@
-const { Tag, User } = require('../models/associations');
 
 exports.getUsers = async (req, res, next) => {
     try {
         const users = await User.findAll({
-            include: [{ model: Tag, as: 'tags', through: { attributes: [] } }]
+            include: [
+                { model: Tag, as: 'tags', through: { attributes: [] } },
+                { model: UserEvents, as: 'userEventsData', include: [{ model: Event }] }
+            ]
         });
 
         if (!users) {
@@ -28,6 +30,10 @@ exports.getUser = async (req, res, next) => {
     console.log(req.params);
     try {
         const user = await User.findByPk(req.params.id, {
+            include: [
+                { model: Tag, as: 'tags', through: { attributes: [] } },
+                { model: UserEvents, as: 'userEventsData', include: [{ model: Event }] }
+            ],
             attributes: { exclude: ['password'] }
         });
 
@@ -72,15 +78,30 @@ exports.updateUser = async (req, res, next) => {
 };
 
 exports.deleteUser = async (req, res, next) => {
+    
     try {
-        const user = await User.findByPk(req.params.id);
-
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+        let { id } = req.params;
+        let userIds = [];
+        id = JSON.parse(id)
+        console.log(id, "id type 1");
+        if (Array.isArray(id)) {
+            console.log(id, "id type 1");
+            userIds = id;
+        } else {
+            userIds = [id];
         }
 
-        await user.destroy();
-        res.json({ message: 'User deleted successfully' });
+        const deletedCount = await User.destroy({
+            where: {
+                id: userIds
+            }
+        });
+
+        if (deletedCount === 0) {
+            return res.status(404).json({ message: 'No users found with the provided ID(s)' });
+        }
+
+        res.json({ message: `${deletedCount} user(s) deleted successfully` });
     } catch (error) {
         next(error);
     }

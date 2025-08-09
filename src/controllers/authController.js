@@ -1,19 +1,13 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const UserEvents = require('../models/UserEvents');
+const VerifiedEmailTemplate = require('../models/VerifiedEmailTemplate');
 const path = require('path');
 const fs = require('fs');
 const nodemailer = require('nodemailer');
-const fileExists = (filePath) => {
-    try {
-        return fs.existsSync(filePath);
-    } catch (error) {
-        console.error(`Error checking if file exists: ${filePath}`, error);
-        return false;
-    }
-};
 const generateToken = (user) => {
     return jwt.sign(
-        { id: user.id, role: user.role },
+        { id: user.id, role: "admin" },
         process.env.JWT_SECRET,
         { expiresIn: '24h' }
     );
@@ -22,13 +16,6 @@ const replaceTemplateVariables = (template, user) => {
     return template
         .replace(/{{firstName}}/g, user.firstName || '')
 };
-
-const templatePath = path.join(__dirname, '../scripts/html', 'verfiy.html');
-const emailTemplate = fs.readFileSync(templatePath, 'utf8');
-// Define paths to image assets
-const imagesDir = path.join(__dirname, '../scripts/html/images');
-const summitBannerPath = path.join(imagesDir, 'summit-banner.jpg');
-const eventDetailsPath = path.join(imagesDir, 'event-details.png');
 const emailConfig = {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD
@@ -64,6 +51,63 @@ exports.register = async (req, res, next) => {
 
 exports.invalidateToken = async (req, res, next) => {
     try {
+        const { eventId, currentUser } = req.body;
+        if (!eventId) {
+            return res.status(400).json({ message: 'Event ID is required' });
+        }
+
+        let foundUserEvent = await UserEvents.findOne({
+            where: {
+                UserId: currentUser.id,
+                EventId: eventId
+            }
+        });
+
+        if (!foundUserEvent || !foundUserEvent.invitationLink) {
+            return res.status(404).json({ message: 'Invitation link not found for this user and event' });
+        }
+
+        const invitationLink = foundUserEvent.invitationLink;
+        const decoded = jwt.verify(invitationLink, process.env.JWT_SECRET);
+        const user = await User.findByPk(decoded.id);
+
+        if (!user) {
+            return res.status(401).json({ message: 'User not found' });
+        }
+
+        await User.update({
+            comment: currentUser.comment,
+            title: currentUser.title,
+            phone: currentUser.phone,
+            email: currentUser.email,
+        }, {
+            where: { id: user.id }
+        });
+
+        let userEvent = await UserEvents.findOne({
+            where: {
+                UserId: user.id,
+                EventId: eventId,
+                invitationLink: invitationLink
+            }
+        });
+
+        if (!userEvent) {
+            return res.status(404).json({ message: 'User event not found' });
+        }
+
+        await userEvent.update({ isInvalidated: true });
+
+        const verifiedEmailTemplate = await VerifiedEmailTemplate.findOne({
+            where: {
+                EventId: eventId
+            }
+        });
+
+        if (!verifiedEmailTemplate) {
+            return res.status(404).json({ message: 'Verified email template not found for this event' });
+        }
+
         const transporter = nodemailer.createTransport({
             host: process.env.EMAIL_HOST,
             port: parseInt(process.env.EMAIL_PORT),
@@ -77,83 +121,18 @@ exports.invalidateToken = async (req, res, next) => {
             },
             debug: true  // Enable debug output
         });
-        const { token, currentUser } = req.body;
-        if (!token) {
-            return res.status(400).json({ message: 'Token is required' });
-        }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await User.findByPk(decoded.id);
-
-        if (!user) {
-            return res.status(401).json({ message: 'User not found' });
-        }
-
-        await User.update({
-
-            tokenInvalidated: true,
-            comment: currentUser.comment,
-            title: currentUser.title,
-            phone: currentUser.phone,
-        }, {
-            where: { id: user.id }
-        });
-        const personalizedContent = replaceTemplateVariables(emailTemplate, user, token);
-
-        // Read image files with proper validation
-        let summitBannerContent, eventDetailsContent;
-
-        // Check if summit banner image exists before reading
-        if (fileExists(summitBannerPath)) {
-            try {
-                summitBannerContent = fs.readFileSync(summitBannerPath);
-            } catch (error) {
-                console.error('Error reading summit banner image:', error.message);
-            }
-        } else {
-            console.warn(`Summit banner image not found at: ${summitBannerPath}`);
-        }
-
-        // Check if event details image exists before reading
-        if (fileExists(eventDetailsPath)) {
-            try {
-                eventDetailsContent = fs.readFileSync(eventDetailsPath);
-            } catch (error) {
-                console.error('Error reading event details image:', error.message);
-            }
-        } else {
-            console.warn(`Event details image not found at: ${eventDetailsPath}`);
-        }
-        // Prepare attachments array
-        const attachments = [];
-
-        // Only add images that were successfully loaded
-        if (summitBannerContent) {
-            attachments.push({
-                filename: 'summit-banner.jpg',
-                content: summitBannerContent,
-                cid: 'summit-banner@techforward.com' // Same CID value as in the HTML img tag
-            });
-        }
-
-        if (eventDetailsContent) {
-            attachments.push({
-                filename: 'event-details.png',
-                content: eventDetailsContent,
-                cid: 'event-details@techforward.com' // Same CID value as in the HTML img tag
-            });
-        }
+        const personalizedContent = replaceTemplateVariables(verifiedEmailTemplate.eventVerifiedEmailTemplate, user);
 
         const mailOptions = {
             from: emailConfig.user,
             to: user.email,
             subject: 'RayaIT - Techforward Summit 2025 - Registration Confirmation',
             html: personalizedContent,
-            attachments: attachments
         };
         await transporter.sendMail(mailOptions);
 
-        res.json({ message: 'Token invalidated successfully' });
+        res.json({ message: 'Token invalidated and email sent successfully' });
     } catch (error) {
         if (error.name === 'JsonWebTokenError') {
             return res.status(401).json({ message: 'Invalid token' });

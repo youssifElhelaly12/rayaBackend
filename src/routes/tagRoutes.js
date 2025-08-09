@@ -6,5 +6,6 @@ router.post('/', tagController.createTag);
 router.get('/', tagController.getTags);
 router.get('/:id', tagController.getTagDetails);
 router.put('/:id', tagController.updateTag);
+router.post('/:tagId/users', tagController.addUsersToTag);
 
 module.exports = router;

@@ -1,8 +1,8 @@
 const multer = require('multer');
 const csv = require('csv-parse');
 const fs = require('fs');
-const User = require('../models/User');
 
+const { Tag, User } = require('../models/associations');
 // Configure multer for file upload
 const upload = multer({
     dest: 'uploads/',
@@ -15,7 +15,10 @@ const upload = multer({
 }).single('file');
 
 exports.uploadCSV = (req, res, next) => {
+    
+
     upload(req, res, async (err) => {
+        const {tagId} = req.body
         if (err) {
             return res.status(400).json({ message: err.message });
         }
@@ -71,7 +74,7 @@ exports.uploadCSV = (req, res, next) => {
                             }
 
                             // Create new user
-                            await User.create({
+                            const newUser = await User.create({
                                 lastName: row.lastName,
                                 firstName: row.firstName,
                                 phone: row.phone,
@@ -79,6 +82,15 @@ exports.uploadCSV = (req, res, next) => {
                                 title: row.title,
                                 company: row.company,
                             });
+
+                            if (tagId) {
+                                const tag = await Tag.findByPk(tagId);
+                                if (tag) {
+                                    await tag.addUser(newUser);
+                                } else {
+                                    errors.push({ row, error: `Tag with ID ${tagId} not found.` });
+                                }
+                            }
                         } catch (error) {
                             errors.push({ row, error: error.message });
                         }

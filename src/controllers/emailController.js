@@ -1,9 +1,10 @@
 import path from 'path';
- import { User, EventEmailTemplate, Event, Tag } from '../models/associations.js';
- import fs from 'fs';
+import { User, EventEmailTemplate, Event, Tag, UserEvents } from '../models/associations.js';
+import fs from 'fs';
 import nodemailer from 'nodemailer';
 import jwt from 'jsonwebtoken';
 import { fileURLToPath } from 'url';
+
 const fileExists = (filePath) => {
     try {
         return fs.existsSync(filePath);
@@ -12,6 +13,7 @@ const fileExists = (filePath) => {
         return false;
     }
 };
+
 // Email configuration from environment variables
 const emailConfig = {
     user: "youssif.elhelaly@gmail.com",
@@ -58,10 +60,10 @@ const sendEmail = async () => {
     }
 };
 
-const generateToken = (user) => {
+const generateToken = (user , event) => {
     // Generate a more compact token by only including essential user data
     return jwt.sign(
-        { id: user.id, email: user.email },
+        { id: user.id, email: user.email, eventId: event },
         process.env.JWT_SECRET,
         { expiresIn: '30d' }
     );
@@ -82,6 +84,7 @@ const eventDetailsPath = path.join(imagesDir, 'event-details.png');
 const replaceTemplateVariables = (template, user, token) => {
     return template
         .replace(/{{firstName}}/g, user.firstName || '')
+        .replace(/{{lastName}}/g, user.lastName || '')
         .replace(/{{token}}/g, token || '')
 };
 
@@ -123,7 +126,7 @@ const sendBulkEmails = async (req, res) => {
         const users = await tag.getUsers(); // Assuming a many-to-many relationship is set up with getUsers
 
         for (const user of users) {
-            const token = generateToken(user);
+            const token = generateToken(user, eventId);
             try {
                 const personalizedContent = replaceTemplateVariables(eventEmailTemplate, user, token);
 
@@ -232,7 +235,7 @@ const sendSingleEmail = async (req, res) => {
             debug: true
         });
 
-        const token = generateToken(user);
+        const token = generateToken(user, eventId);
         const personalizedContent = replaceTemplateVariables(eventEmailTemplate, user, token);
 
 
@@ -253,4 +256,100 @@ const sendSingleEmail = async (req, res) => {
     }
 };
 
-export { sendBulkEmails, sendSingleEmail };
+
+
+const sendBulkEmailForUsers = async (req, res) => {
+    const { userIds, eventId } = req.body;
+
+    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+        return res.status(400).json({ message: 'User IDs are required for sending bulk emails to specific users.' });
+    }
+
+    if (!eventId) {
+        return res.status(400).json({ message: 'Event ID is required for sending bulk emails to specific users.' });
+    }
+
+    try {
+        const eventEmailTemplateRecord = await EventEmailTemplate.findOne({ where: { EventId: eventId } });
+        if (!eventEmailTemplateRecord) {
+            return res.status(404).json({ message: 'Email template not found for the given Event ID.' });
+        }
+        const eventEmailTemplate = eventEmailTemplateRecord.eventEmailTemplate;
+
+        const event = await Event.findByPk(eventId);
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found for the given Event ID.' });
+        }
+
+        const users = await User.findAll({ where: { id: userIds } });
+        if (users.length === 0) {
+            return res.status(404).json({ message: 'No users found for the provided user IDs.' });
+        }
+
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                user: emailConfig.user,
+                pass: emailConfig.pass
+            },
+            debug: true
+        });
+
+        for (const user of users) {
+            const token = generateToken(user, eventId);
+            try {
+                const personalizedContent = replaceTemplateVariables(eventEmailTemplate, user, token);
+
+                let summitBannerContent, eventDetailsContent;
+
+             
+
+                const mailOptions = {
+                    from: emailConfig.user,
+                    to: user.email,
+                    subject: event.eventName || 'Invitation',
+                    html: personalizedContent,
+          
+                };
+
+                let resMail = await transporter.sendMail(mailOptions);
+                console.log(resMail);
+
+                // Check if a UserEvents record already exists
+                const existingUserEvent = await UserEvents.findOne({
+                    where: {
+                        userId: user.id,
+                        eventId: eventId
+                    }
+                });
+
+                if (existingUserEvent) {
+                    // If record exists, update only invitationUrl and emailStatus
+                    await existingUserEvent.update({
+                        invitationUrl: token,
+                        emailStatus: true
+                    });
+                } else {
+                    // If no record exists, create a new one
+                    await UserEvents.create({
+                        userId: user.id,
+                        eventId: eventId,
+                        invitationUrl: token,
+                        emailStatus: true,
+                        acceptedInvitationStatus: false // Default to false
+                    });
+                }
+
+            } catch (error) {
+                console.error(`Error sending email to user ${user.email}:`, error);
+            }
+        }
+
+        res.status(200).json({ message: 'Email sending process completed for specified users.' });
+    } catch (error) {
+        console.error('Error in sendBulkEmailForUsers:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+export { sendBulkEmails, sendSingleEmail, sendBulkEmailForUsers };
