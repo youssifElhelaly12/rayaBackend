@@ -1,3 +1,4 @@
+const { User, Tag, UserEvents, Event } = require('../models/associations');
 
 exports.getUsers = async (req, res, next) => {
     try {
