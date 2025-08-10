@@ -60,7 +60,7 @@ const sendEmail = async () => {
     }
 };
 
-const generateToken = (user , event) => {
+const generateToken = (user, event) => {
     // Generate a more compact token by only including essential user data
     return jwt.sign(
         { id: user.id, email: user.email, eventId: event },
@@ -85,7 +85,12 @@ const replaceTemplateVariables = (template, user, token) => {
     return template
         .replace(/{{firstName}}/g, user.firstName || '')
         .replace(/{{lastName}}/g, user.lastName || '')
+        .replace(/{{title}}/g, user.title || '')
+        .replace(/{{phone}}/g, user.phone || '')
+        .replace(/{{email}}/g, user.email || '')
+        .replace(/{{company}}/g, user.company || '')
         .replace(/{{token}}/g, token || '')
+
 };
 
 const sendBulkEmails = async (req, res) => {
@@ -302,14 +307,14 @@ const sendBulkEmailForUsers = async (req, res) => {
 
                 let summitBannerContent, eventDetailsContent;
 
-             
+
 
                 const mailOptions = {
                     from: emailConfig.user,
                     to: user.email,
                     subject: event.eventName || 'Invitation',
                     html: personalizedContent,
-          
+
                 };
 
                 let resMail = await transporter.sendMail(mailOptions);

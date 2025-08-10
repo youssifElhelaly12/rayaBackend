@@ -38,7 +38,7 @@ const { VerifiedEmailTemplate, Event } = require('../models/associations');
  */
 exports.createVerifiedEmailTemplate = async (req, res) => {
   try {
-    const { EventId, eventVerifiedEmailTemplate } = req.body;
+    const { EventId, eventVerifiedEmailTemplate, designTemplate } = req.body;
 
     if (!EventId || typeof EventId !== 'number') {
       return res.status(400).json({ message: 'EventId is required and must be a number.' });
@@ -57,7 +57,7 @@ exports.createVerifiedEmailTemplate = async (req, res) => {
       return res.status(409).json({ message: 'An email template already exists for this event.' });
     }
 
-    const newTemplate = await VerifiedEmailTemplate.create({ EventId, eventVerifiedEmailTemplate });
+    const newTemplate = await VerifiedEmailTemplate.create({ EventId, eventVerifiedEmailTemplate, designTemplate });
     return res.status(201).json(newTemplate);
   } catch (error) {
     console.error('Error creating verified email template:', error);
@@ -190,7 +190,7 @@ exports.getVerifiedEmailTemplateById = async (req, res) => {
 exports.updateVerifiedEmailTemplate = async (req, res) => {
   try {
     const { id } = req.params;
-    const { EventId, eventVerifiedEmailTemplate } = req.body;
+    const { EventId, eventVerifiedEmailTemplate, designTemplate } = req.body;
 
     const template = await VerifiedEmailTemplate.findByPk(id);
     if (!template) {
@@ -212,7 +212,7 @@ exports.updateVerifiedEmailTemplate = async (req, res) => {
       }
     }
 
-    await template.update({ EventId, eventVerifiedEmailTemplate });
+    await template.update({ EventId, eventVerifiedEmailTemplate, designTemplate });
     return res.status(200).json(template);
   } catch (error) {
     console.error('Error updating verified email template:', error);

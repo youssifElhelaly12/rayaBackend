@@ -17,6 +17,9 @@
  *         eventEmailTemplate:
  *           type: string
  *           description: The HTML content of the email template.
+ *         designTemplate:
+ *           type: object
+ *           description: The JSON design template for the email.
  *         createdAt:
  *           type: string
  *           format: date-time
@@ -47,6 +50,10 @@ module.exports = (sequelize, DataTypes) => {
     eventEmailTemplate: {
       type: DataTypes.TEXT,
       allowNull: false,
+    },
+    designTemplate: {
+      type: DataTypes.JSON,
+      allowNull: true,
     },
   });
 

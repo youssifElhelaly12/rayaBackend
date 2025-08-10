@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-const UserEvents = require('../models/UserEvents');
-const VerifiedEmailTemplate = require('../models/VerifiedEmailTemplate');
+
+const { UserEvents, User, VerifiedEmailTemplate } = require('../models/associations');
+
 const path = require('path');
 const fs = require('fs');
 const nodemailer = require('nodemailer');
@@ -12,9 +12,16 @@ const generateToken = (user) => {
         { expiresIn: '24h' }
     );
 };
-const replaceTemplateVariables = (template, user) => {
+const replaceTemplateVariables = (template, user, token) => {
     return template
         .replace(/{{firstName}}/g, user.firstName || '')
+        .replace(/{{lastName}}/g, user.lastName || '')
+        .replace(/{{title}}/g, user.title || '')
+        .replace(/{{phone}}/g, user.phone || '')
+        .replace(/{{email}}/g, user.email || '')
+        .replace(/{{company}}/g, user.company || '')
+        .replace(/{{token}}/g, token || '')
+
 };
 const emailConfig = {
     user: process.env.EMAIL_USER,
@@ -51,23 +58,32 @@ exports.register = async (req, res, next) => {
 
 exports.invalidateToken = async (req, res, next) => {
     try {
-        const { eventId, currentUser } = req.body;
+        const { eventId, currentUser , token  } = req.body;
         if (!eventId) {
             return res.status(400).json({ message: 'Event ID is required' });
         }
-
+        const decodedToken = jwt.decode(token);
+        
         let foundUserEvent = await UserEvents.findOne({
             where: {
-                UserId: currentUser.id,
+                UserId: decodedToken.id,
                 EventId: eventId
             }
         });
+        console.log("working" , decodedToken.id)
 
-        if (!foundUserEvent || !foundUserEvent.invitationLink) {
+        console.log(foundUserEvent , "test found user")
+
+        if (!foundUserEvent || !foundUserEvent.invitationUrl) {
             return res.status(404).json({ message: 'Invitation link not found for this user and event' });
         }
 
-        const invitationLink = foundUserEvent.invitationLink;
+        // Update acceptedInvitationStatus to true
+        foundUserEvent.acceptedInvitationStatus = true;
+        await foundUserEvent.save();
+
+        const invitationLink = foundUserEvent.invitationUrl;
+        console.log(invitationLink)
         const decoded = jwt.verify(invitationLink, process.env.JWT_SECRET);
         const user = await User.findByPk(decoded.id);
 
@@ -80,6 +96,7 @@ exports.invalidateToken = async (req, res, next) => {
             title: currentUser.title,
             phone: currentUser.phone,
             email: currentUser.email,
+            company: currentUser.company
         }, {
             where: { id: user.id }
         });
@@ -88,7 +105,7 @@ exports.invalidateToken = async (req, res, next) => {
             where: {
                 UserId: user.id,
                 EventId: eventId,
-                invitationLink: invitationLink
+                invitationUrl: invitationLink
             }
         });
 
@@ -109,15 +126,10 @@ exports.invalidateToken = async (req, res, next) => {
         }
 
         const transporter = nodemailer.createTransport({
-            host: process.env.EMAIL_HOST,
-            port: parseInt(process.env.EMAIL_PORT),
-            secure: false,  // Using STARTTLS
-            tls: {
-                ciphers: 'SSLv3'
-            },
+            service: "gmail",
             auth: {
-                user: emailConfig.user,
-                pass: emailConfig.pass
+                user: "youssif.elhelaly@gmail.com",
+                pass: "kkgk ubmd sekv thcs"
             },
             debug: true  // Enable debug output
         });

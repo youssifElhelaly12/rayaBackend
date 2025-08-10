@@ -16,6 +16,9 @@
          eventVerifiedEmailTemplate:
            type: string
            description: The HTML content of the verified email template.
+         designTemplate:
+           type: object
+           description: The JSON design template for the verified email.
  *         createdAt:
  *           type: string
  *           format: date-time
@@ -46,6 +49,10 @@ module.exports = (sequelize, DataTypes) => {
     eventVerifiedEmailTemplate: {
       type: DataTypes.TEXT,
       allowNull: false,
+    },
+    designTemplate: {
+      type: DataTypes.JSON,
+      allowNull: true,
     },
   });
 

@@ -66,7 +66,7 @@ exports.uploadCSV = (req, res, next) => {
                             // Validate Egyptian phone number if provided
                             if (row.phone) {
                                 // Egyptian phone numbers: +20xxxxxxxxx or 01xxxxxxxxx (9 digits after prefix)
-                                const egyptPhoneRegex = /^(\+20|0)1[0-2,5]{1}[0-9]{8}$/;
+                                const egyptPhoneRegex = /^(?:\+20|20|0)1[0-2,5]{1}[0-9]{8}$/;
                                 if (!egyptPhoneRegex.test(row.phone)) {
                                     errors.push({ row, error: 'Invalid Egyptian phone number format' });
                                     continue;

@@ -39,7 +39,7 @@ const { EventEmailTemplate, Event } = require('../models/associations');
  */
 exports.createEventEmailTemplate = async (req, res) => {
   try {
-    const { EventId, eventEmailTemplate } = req.body;
+    const { EventId, eventEmailTemplate, designTemplate } = req.body;
 
     if (!EventId || typeof EventId !== 'number') {
       return res.status(400).json({ message: 'EventId is required and must be a number.' });
@@ -58,7 +58,7 @@ exports.createEventEmailTemplate = async (req, res) => {
       return res.status(409).json({ message: 'An email template already exists for this event.' });
     }
 
-    const newTemplate = await EventEmailTemplate.create({ EventId, eventEmailTemplate });
+    const newTemplate = await EventEmailTemplate.create({ EventId, eventEmailTemplate, designTemplate });
     return res.status(201).json(newTemplate);
   } catch (error) {
     console.error('Error creating event email template:', error);
@@ -191,7 +191,7 @@ exports.getEventEmailTemplateById = async (req, res) => {
 exports.updateEventEmailTemplate = async (req, res) => {
   try {
     const { id } = req.params;
-    const { EventId, eventEmailTemplate } = req.body;
+    const { EventId, eventEmailTemplate, designTemplate } = req.body;
 
     const template = await EventEmailTemplate.findByPk(id);
     if (!template) {
@@ -206,7 +206,7 @@ exports.updateEventEmailTemplate = async (req, res) => {
       }
     }
 
-    await template.update({ EventId, eventEmailTemplate });
+    await template.update({ EventId, eventEmailTemplate, designTemplate });
     return res.status(200).json(template);
   } catch (error) {
     console.error('Error updating event email template:', error);

@@ -2,7 +2,13 @@ const { User, Tag, UserEvents, Event } = require('../models/associations');
 
 exports.getUsers = async (req, res, next) => {
     try {
-        const users = await User.findAll({
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const offset = (page - 1) * limit;
+
+        const { count, rows: users } = await User.findAndCountAll({
+            limit: limit,
+            offset: offset,
             include: [
                 { model: Tag, as: 'tags', through: { attributes: [] } },
                 { model: UserEvents, as: 'userEventsData', include: [{ model: Event }] }
@@ -17,7 +23,12 @@ exports.getUsers = async (req, res, next) => {
             return res.status(404).json({ message: 'No users found' });
         }
 
-        res.json(users);
+        res.json({
+            totalUsers: count,
+            currentPage: page,
+            perPage: limit,
+            users: users,
+        });
     } catch (error) {
         console.error('Error fetching users:', error);
         res.status(500).json({
@@ -54,10 +65,7 @@ exports.updateUser = async (req, res, next) => {
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
-        // Check if user is updating their own data or is admin
-        if (req.user.id !== user.id && req.user.role !== 'admin') {
-            return res.status(403).json({ message: 'Not authorized' });
-        }
+       
 
         const { username, email, password } = req.body;
 
