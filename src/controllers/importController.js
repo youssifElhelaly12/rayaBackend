@@ -44,7 +44,7 @@ exports.uploadCSV = (req, res, next) => {
                     for (const row of results) {
                         try {
                             // Validate required fields
-                            if (!row.email || !row.firstName ||!row.lastName) {
+                            if (!row.email || !row.firstName || !row.lastName || !row.company) {
                                 errors.push({ row, error: 'Missing required fields' });
                                 continue;
                             }
