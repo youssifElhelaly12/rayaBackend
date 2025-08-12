@@ -2,6 +2,31 @@ const { User, Tag, UserEvents, Event } = require('../models/associations');
 
 exports.getUsers = async (req, res, next) => {
     try {
+        if (req.query.limit === 'all') {
+            const users = await User.findAll({
+                order: [['company', 'ASC']],
+                include: [
+                    { model: Tag, as: 'tags', through: { attributes: [] } },
+                    { model: UserEvents, as: 'userEventsData', include: [{ model: Event }] }
+                ]
+            });
+            
+            if (!users) {
+                return res.status(500).json({ message: 'Database error occurred' });
+            }
+
+            if (users.length === 0) {
+                return res.status(404).json({ message: 'No users found' });
+            }
+
+            return res.json({
+                totalUsers: users.length,
+                currentPage: 1,
+                perPage: users.length,
+                users: users,
+            });
+        }
+
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const offset = (page - 1) * limit;
@@ -9,6 +34,7 @@ exports.getUsers = async (req, res, next) => {
         const { count, rows: users } = await User.findAndCountAll({
             limit: limit,
             offset: offset,
+            order: [['company', 'ASC']],
             include: [
                 { model: Tag, as: 'tags', through: { attributes: [] } },
                 { model: UserEvents, as: 'userEventsData', include: [{ model: Event }] }

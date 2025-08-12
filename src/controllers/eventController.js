@@ -62,6 +62,7 @@ module.exports = {
   getAllEvents: async (req, res) => {
     try {
       const events = await Event.findAll({
+        order: [['createdAt', 'DESC']],
         include: [
           { model: EventEmailTemplate },
           { model: VerifiedEmailTemplate }
