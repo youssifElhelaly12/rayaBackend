@@ -46,6 +46,11 @@ module.exports = (sequelize, DataTypes) => {
     EventId: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      references: {
+        model: 'Events',
+        key: 'id',
+      },
+      onDelete: 'CASCADE',
     },
     eventEmailTemplate: {
       type: DataTypes.TEXT,
