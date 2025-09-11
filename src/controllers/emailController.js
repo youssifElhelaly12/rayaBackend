@@ -1,8 +1,8 @@
 import path from 'path';
-import { User, EventEmailTemplate, Event, Tag, UserEvents } from '../models/associations.js';
 import fs from 'fs';
 import nodemailer from 'nodemailer';
 import jwt from 'jsonwebtoken';
+import { User, EventEmailTemplate, Event, Tag, UserEvents } from '../models/associations.js';
 import { fileURLToPath } from 'url';
 
 const fileExists = (filePath) => {
@@ -13,7 +13,6 @@ const fileExists = (filePath) => {
         return false;
     }
 };
-
 // Email configuration from environment variables
 const emailConfig = {
     user: "youssif.elhelaly@gmail.com",
@@ -60,6 +59,38 @@ const sendEmail = async () => {
     }
 };
 
+const sendPasswordResetEmail = async (email, resetToken) => {
+    try {
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                user: emailConfig.user,
+                pass: emailConfig.pass
+            },
+            debug: true
+        });
+
+        const resetLink = `https://events.raya-it.net/reset-password?token=${resetToken}`;
+        
+        const mailOptions = {
+            from: emailConfig.user,
+            to: email,
+            subject: 'Password Reset Request',
+            html: `
+                <p>You requested a password reset for your admin account.</p>
+                <p>Click this link to reset your password: <a href="${resetLink}">${resetLink}</a></p>
+                <p>This link will expire in 1 hour.</p>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`Password reset email sent to ${email}`);
+    } catch (error) {
+        console.error('Error sending password reset email:', error);
+        throw error;
+    }
+};
+
 const generateToken = (user, event) => {
     // Generate a more compact token by only including essential user data
     return jwt.sign(
@@ -68,7 +99,6 @@ const generateToken = (user, event) => {
         { expiresIn: '30d' }
     );
 };
-
 // Get the directory path dynamically
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -79,7 +109,6 @@ const __dirname = path.dirname(__filename);
 const imagesDir = path.join(__dirname, '../scripts/html/images');
 const summitBannerPath = path.join(imagesDir, 'summit-banner.jpg');
 const eventDetailsPath = path.join(imagesDir, 'event-details.png');
-
 
 const replaceTemplateVariables = (template, user, token) => {
     return template
@@ -118,8 +147,8 @@ const sendBulkEmails = async (req, res) => {
         const transporter = nodemailer.createTransport({
             service: "gmail",
             auth: {
-                user: "youssif.elhelaly@gmail.com",
-                pass: "kkgk ubmd sekv thcs"
+                user: emailConfig.user,
+                pass: emailConfig.pass
             },
             debug: true
         });
@@ -135,66 +164,22 @@ const sendBulkEmails = async (req, res) => {
             try {
                 const personalizedContent = replaceTemplateVariables(eventEmailTemplate, user, token);
 
-                // Read image files with proper validation
-                let summitBannerContent, eventDetailsContent;
-
-                // Check if summit banner image exists before reading
-                if (fileExists(summitBannerPath)) {
-                    try {
-                        summitBannerContent = fs.readFileSync(summitBannerPath);
-                    } catch (error) {
-                        console.error('Error reading summit banner image:', error.message);
-                    }
-                } else {
-                    console.warn(`Summit banner image not found at: ${summitBannerPath}`);
-                }
-
-                // Check if event details image exists before reading
-                if (fileExists(eventDetailsPath)) {
-                    try {
-                        eventDetailsContent = fs.readFileSync(eventDetailsPath);
-                    } catch (error) {
-                        console.error('Error reading event details image:', error.message);
-                    }
-                } else {
-                    console.warn(`Event details image not found at: ${eventDetailsPath}`);
-                }
-
-                // Prepare attachments array
-                const attachments = [];
-
-                // Only add images that were successfully loaded
-                if (summitBannerContent) {
-                    attachments.push({
-                        filename: 'summit-banner.jpg',
-                        content: summitBannerContent,
-                        cid: 'summit-banner@techforward.com' // Same CID value as in the HTML img tag
-                    });
-                }
-
-                if (eventDetailsContent) {
-                    attachments.push({
-                        filename: 'event-details.png',
-                        content: eventDetailsContent,
-                        cid: 'event-details@techforward.com' // Same CID value as in the HTML img tag
-                    });
-                }
 
                 const mailOptions = {
                     from: emailConfig.user,
                     to: user.email,
-                    subject: event.eventName || 'Invitation', // Use event name as subject or a default
+                    subject: event.invitationSubject || 'Invitation', // Use event invitationSubject as subject or a default
                     html: personalizedContent,
-                    attachments: attachments
+                   
                 };
 
 
-                let res = await transporter.sendMail(mailOptions);
-                console.log(res);
+                const info = await transporter.sendMail(mailOptions);
+                console.log('Email sent: %s', info.messageId);
                 await user.update({ emailStatus: true });
-                await user.update({ invitationLink: token });
+                 await user.update({ invitationLink: token });
             } catch (error) {
-                console.log(error);
+                console.error('Failed to send email to %s: %s', user.email, error);
             }
         }
 
@@ -247,7 +232,7 @@ const sendSingleEmail = async (req, res) => {
         const mailOptions = {
             from: emailConfig.user,
             to: user.email,
-            subject: event.eventName || 'Invitation',
+            subject: event.invitationSubject || 'Invitation',
             html: personalizedContent,
         };
 
@@ -260,8 +245,6 @@ const sendSingleEmail = async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 };
-
-
 
 const sendBulkEmailForUsers = async (req, res) => {
     const { userIds, eventId } = req.body;
@@ -312,7 +295,7 @@ const sendBulkEmailForUsers = async (req, res) => {
                 const mailOptions = {
                     from: emailConfig.user,
                     to: user.email,
-                    subject: event.eventName || 'Invitation',
+                    subject: event.invitationSubject || 'Invitation',
                     html: personalizedContent,
 
                 };
@@ -357,4 +340,4 @@ const sendBulkEmailForUsers = async (req, res) => {
     }
 };
 
-export { sendBulkEmails, sendSingleEmail, sendBulkEmailForUsers };
+export { sendEmail, sendBulkEmails, sendSingleEmail, sendBulkEmailForUsers, sendPasswordResetEmail };

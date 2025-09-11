@@ -31,6 +31,16 @@ module.exports = (sequelize, DataTypes) => {
         },
         onDelete: 'CASCADE',
       },
+    isEnter: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    idImage: {
+      type: DataTypes.JSON, // Native JSON column
+      allowNull: true,
+      defaultValue: []    
+    },
   }, {
     timestamps: false,
   });

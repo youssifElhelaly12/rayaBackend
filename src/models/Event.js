@@ -21,6 +21,10 @@ module.exports = (sequelize, DataTypes) => {
           type: DataTypes.STRING,
           allowNull: true,
       },
+      idImage: {
+          type: DataTypes.ENUM('false', 'required', 'optional'),
+          allowNull: true,
+      },
       apologizeContent: {
           type: DataTypes.TEXT,
           allowNull: true,
@@ -28,8 +32,15 @@ module.exports = (sequelize, DataTypes) => {
       acceptedContent: {
           type: DataTypes.TEXT,
           allowNull: true,
+      },
+      invitationSubject: {
+          type: DataTypes.STRING,
+          allowNull: true,
+      },
+      verifySubject: {
+          type: DataTypes.STRING,
+          allowNull: true,
       }
   });
-
   return Event;
 };

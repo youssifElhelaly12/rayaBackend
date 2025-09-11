@@ -7,5 +7,7 @@ router.get('/', tagController.getTags);
 router.get('/:id', tagController.getTagDetails);
 router.put('/:id', tagController.updateTag);
 router.post('/:tagId/users', tagController.addUsersToTag);
+router.delete('/:id', tagController.deleteTag);
+router.delete('/:tagId/users/:userId', tagController.removeUserFromTag);
 
 module.exports = router;

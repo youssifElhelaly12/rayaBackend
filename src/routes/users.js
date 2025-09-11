@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
-const { getUsers, getUser, updateUser, deleteUser, createUser, searchUsersByEmail, deleteAllUsers, sendInvitationEmail } = require('../controllers/userController'); // Add searchUsersByEmail
+const { getUsers, getUser, updateUser, deleteUser, createUser, searchUsersByEmail, deleteAllUsers, sendInvitationEmail, updateUserEntryStatus, getUserEventDetails } = require('../controllers/userController'); // Add searchUsersByEmail
 const { register, login, invalidateToken } = require('../controllers/authController');
 
 router.route('/')
@@ -22,5 +22,10 @@ router.route('/delete/:id')
 router.post('/:id/invite', protect, sendInvitationEmail);
 
 router.post('/logout', invalidateToken);
+
+router.put('/:userId/events/:eventId/enter', protect, updateUserEntryStatus);
+router.get('/:userId/:eventId/', protect, getUserEventDetails);
+
+
 
 module.exports = router;

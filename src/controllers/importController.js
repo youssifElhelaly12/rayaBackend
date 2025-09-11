@@ -59,7 +59,7 @@ exports.uploadCSV = (req, res, next) => {
                             // Check if user already exists
                             const existingUser = await User.findOne({ where: { email: row.email } });
                             if (existingUser) {
-                                errors.push({ row, error: 'User with this email already exists' });
+                                errors.push({ row, error: `User with this email already exists`, id: existingUser.id });
                                 continue;
                             }
 

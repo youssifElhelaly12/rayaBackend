@@ -98,6 +98,24 @@ exports.updateTag = async (req, res) => {
     }
 };
 
+exports.deleteTag = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const tag = await Tag.findByPk(id);
+        if (!tag) {
+            return res.status(404).json({ message: 'Tag not found' });
+        }
+
+        // Remove associations with users first (through table), then delete the tag
+        await tag.setUsers([]);
+        await tag.destroy();
+
+        return res.status(200).json({ message: 'Tag deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting tag:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+};
 
 /**
  * @swagger
@@ -195,5 +213,28 @@ exports.addUsersToTag = async (req, res) => {
     } catch (error) {
         console.error('Error adding users to tag:', error);
         res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+exports.removeUserFromTag = async (req, res) => {
+    try {
+        const { tagId, userId } = req.params;
+
+        const tag = await Tag.findByPk(tagId);
+        if (!tag) {
+            return res.status(404).json({ message: 'Tag not found' });
+        }
+
+        const user = await User.findByPk(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        await tag.removeUser(user);
+
+        return res.status(200).json({ message: 'User removed from tag successfully' });
+    } catch (error) {
+        console.error('Error removing user from tag:', error);
+        return res.status(500).json({ error: 'Internal server error' });
     }
 };

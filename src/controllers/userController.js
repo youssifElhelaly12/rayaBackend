@@ -2,9 +2,25 @@ const { User, Tag, UserEvents, Event } = require('../models/associations');
 
 exports.getUsers = async (req, res, next) => {
     try {
+        // Get sort parameters from query
+        const sortField = req.query.sort || 'company';
+        const sortOrder = req.query.order || 'ASC';
+        
+        // Validate sort field
+        const validSortFields = ['title', 'firstName', 'company', 'email'];
+        if (!validSortFields.includes(sortField)) {
+            return res.status(400).json({ message: 'Invalid sort field' });
+        }
+        
+        // Validate sort order
+        const validSortOrders = ['ASC', 'DESC'];
+        if (!validSortOrders.includes(sortOrder.toUpperCase())) {
+            return res.status(400).json({ message: 'Invalid sort order' });
+        }
+
         if (req.query.limit === 'all') {
             const users = await User.findAll({
-                order: [['company', 'ASC']],
+                order: [[sortField, sortOrder]],
                 include: [
                     { model: Tag, as: 'tags', through: { attributes: [] } },
                     { model: UserEvents, as: 'userEventsData', include: [{ model: Event }] }
@@ -34,7 +50,7 @@ exports.getUsers = async (req, res, next) => {
         const { count, rows: users } = await User.findAndCountAll({
             limit: limit,
             offset: offset,
-            order: [['company', 'ASC']],
+            order: [[sortField, sortOrder]],
             include: [
                 { model: Tag, as: 'tags', through: { attributes: [] } },
                 { model: UserEvents, as: 'userEventsData', include: [{ model: Event }] }
@@ -197,10 +213,118 @@ exports.searchUsersByEmail = async (req, res, next) => {
 
         res.json(users);
     } catch (error) {
-        console.error('Error searching users by email:', error);
-        next(error);
-    }
-};
+         console.error('Error searching users by email:', error);
+         next(error);
+     }
+ };
+ 
+ exports.getUserEventDetails = async (req, res, next) => {
+     try {
+         const { userId, eventId } = req.params;
+         
+         const [user, event, userEvent] = await Promise.all([
+             User.findByPk(userId),
+             Event.findByPk(eventId),
+             UserEvents.findOne({
+                 where: {
+                     userId,
+                     eventId
+                 }
+             })
+         ]);
+ 
+         if (!user) {
+             return res.status(404).json({ message: 'User not found' });
+         }
+         if (!event) {
+             return res.status(404).json({ message: 'Event not found' });
+         }
+ 
+         res.json({ 
+             user: {
+                 id: user.id,
+                 email: user.email,
+                 firstName: user.firstName,
+                 lastName: user.lastName
+             },
+             event: {
+                 id: event.id,
+                 name: event.name,
+             },
+             userEvent
+         });
+     } catch (error) {
+         console.error('Error getting user event details:', error);
+         next(error);
+     }
+ };
+
+exports.updateUserEntryStatus = async (req, res, next) => {
+     try {
+         const { userId, eventId } = req.params;
+         
+         const [userEvent, user, event] = await Promise.all([
+             UserEvents.findOne({
+                 where: {
+                     userId,
+                     eventId
+                 }
+             }),
+             User.findByPk(userId),
+             Event.findByPk(eventId)
+         ]);
+ 
+         if (!userEvent) {
+             return res.status(404).json({ message: 'User event record not found' });
+         }
+         if (!user) {
+             return res.status(404).json({ message: 'User not found' });
+         }
+         if (!event) {
+             return res.status(404).json({ message: 'Event not found' });
+         }
+ 
+         if (userEvent.isEnter) {
+             return res.status(400).json({ 
+                 message: 'User has already entered this event',
+                 userEvent,
+                 user: {
+                     id: user.id,
+                     email: user.email,
+                     firstName: user.firstName,
+                     lastName: user.lastName
+                 },
+                 event: {
+                     id: event.id,
+                     name: event.name,
+                     date: event.date
+                 }
+             });
+         }
+ 
+         userEvent.isEnter = true;
+         await userEvent.save();
+ 
+         res.json({ 
+             message: 'User entry status updated successfully', 
+             userEvent,
+             user: {
+                 id: user.id,
+                 email: user.email,
+                 firstName: user.firstName,
+                 lastName: user.lastName
+             },
+             event: {
+                 id: event.id,
+                 name: event.name,
+                 date: event.date
+             }
+         });
+     } catch (error) {
+         console.error('Error updating user entry status:', error);
+         next(error);
+     }
+ };
 
 exports.deleteAllUsers = async (req, res, next) => {
     try {

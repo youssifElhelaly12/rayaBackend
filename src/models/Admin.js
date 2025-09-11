@@ -15,12 +15,23 @@ const Admin = sequelize.define('Admin', {
             isEmail: true
         }
     },
+    role: {
+        type: DataTypes.ENUM('super_admin', 'admin', 'user'),
+        allowNull: false,
+        defaultValue: 'admin'
+    },
     password: {
         type: DataTypes.STRING,
         allowNull: false,
         validate: {
             len: [6, 100]
         }
+    },
+    resetToken: {
+        type: DataTypes.STRING
+    },
+    resetTokenExpiry: {
+        type: DataTypes.BIGINT
     }
 }, {
     hooks: {
