@@ -25,7 +25,7 @@ const upload = multer({ storage: storage });
 
 // 🔥 Helper to always format event with full image URL
 const formatEventImage = (event) => {
-  const baseUrl = 'https://rayabackend.onrender.com/'; // Adjust for your deployment
+  const baseUrl = 'https://rayabackend.onrender.com'; // Adjust for your deployment
   return {
     ...event.toJSON(),
     eventBannerImage: event.eventBannerImage

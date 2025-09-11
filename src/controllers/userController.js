@@ -109,19 +109,37 @@ exports.updateUser = async (req, res, next) => {
         }
        
 
-        const { username, email, password } = req.body;
+        const { email, firstName, lastName, phone, title, comment, company, tagId } = req.body;
 
-        if (username) user.username = username;
         if (email) user.email = email;
-        if (password) user.password = password;
+        if (firstName) user.firstName = firstName;
+        if (lastName) user.lastName = lastName;
+        if (phone) user.phone = phone;
+        if (title) user.title = title;
+        if (comment) user.comment = comment;
+        if (company) user.company = company;
+
+        if (tagId) {
+            const tag = await Tag.findByPk(tagId);
+            if (!tag) {
+                return res.status(404).json({ message: 'Tag not found' });
+            }
+            await user.setTags([tag]); // setTags will replace existing associations
+        } else if (tagId === null) {
+            await user.setTags([]); // Remove all tags if tagId is explicitly null
+        }
 
         await user.save();
 
         res.json({
             id: user.id,
-            username: user.username,
             email: user.email,
-            role: user.role
+            firstName: user.firstName,
+            lastName: user.lastName,
+            phone: user.phone,
+            title: user.title,
+            comment: user.comment,
+            company: user.company,
         });
     } catch (error) {
         next(error);
@@ -199,19 +217,28 @@ exports.searchUsersByEmail = async (req, res, next) => {
         const { Op } = require('sequelize');
 
         // Perform case-insensitive search using Sequelize
-        const users = await User.findAll({
+        const { count, rows: users } = await User.findAndCountAll({
             where: {
                 email: {
                     [Op.like]: `%${email}%`
                 }
-            }
+            },
+            include: [
+                { model: Tag, as: 'tags', through: { attributes: [] } },
+                { model: UserEvents, as: 'userEventsData', include: [{ model: Event }] }
+            ]
         });
 
         if (users.length === 0) {
             return res.status(404).json({ message: 'No users found with the provided email' });
         }
 
-        res.json(users);
+        res.json({
+            totalUsers: count,
+            currentPage: 1,
+            perPage: users.length,
+            users: users,
+        });
     } catch (error) {
          console.error('Error searching users by email:', error);
          next(error);

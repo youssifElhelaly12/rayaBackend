@@ -115,6 +115,7 @@ exports.invalidateToken = async (req, res, next) => {
                 to: user.email,
                 subject: event.verifySubject || 'Event Verification',
                 html: personalizedContent,
+                
                 attachments: [{ filename: 'QR_code.png', content: qrCodeBuffer, cid: 'qrcode' }]
             });
 

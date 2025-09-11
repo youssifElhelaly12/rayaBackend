@@ -11,7 +11,7 @@ async function createAdmin() {
             password: 'admin123'
         });
 
-        console.log('Admin created successfully:', admin.email);
+        console.log('Admin created successfully:', admin.toJSON());
         process.exit(0);
     } catch (error) {
         console.error('Error creating admin:', error);

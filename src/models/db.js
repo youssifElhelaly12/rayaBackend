@@ -12,6 +12,12 @@ const dbPassword = isProduction ? process.env.DB_PASSWORD_PROD : process.env.DB_
 const dbHost = isProduction ? process.env.DB_HOST_PROD : process.env.DB_HOST_DEV;
 const dbPort = isProduction ? process.env.DB_PORT_PROD : process.env.DB_PORT_DEV;
 const dbDialect = isProduction ? process.env.DB_DIALECT_PROD : process.env.DB_DIALECT_DEV;
+// const dbName = "rayaitny_backenEmailServices";
+// const dbUser = "rayaitny_emilsDB";
+// const dbPassword = "Helaly@12";
+// const dbHost = "localhost";
+// const dbPort = "3307";
+// const dbDialect = "mysql";
 
 const { Sequelize } = require('sequelize');
 
