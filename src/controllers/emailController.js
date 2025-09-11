@@ -15,8 +15,8 @@ const fileExists = (filePath) => {
 };
 // Email configuration from environment variables
 const emailConfig = {
-    user: "youssif.elhelaly@gmail.com",
-    pass: "kkgk ubmd sekv thcs"
+    user: 'rayait_events@rayacorp.com',
+    pass: 'MyBMv@Z9eaPWYZN'
 };
 
 const sendEmail = async () => {
@@ -62,7 +62,12 @@ const sendEmail = async () => {
 const sendPasswordResetEmail = async (email, resetToken) => {
     try {
         const transporter = nodemailer.createTransport({
-            service: "gmail",
+            host: 'smtp.office365.com',
+            port: 587,
+            secure: false,  // Using STARTTLS
+            tls: {
+                ciphers: 'SSLv3'
+            },
             auth: {
                 user: emailConfig.user,
                 pass: emailConfig.pass
@@ -145,7 +150,12 @@ const sendBulkEmails = async (req, res) => {
     }
     try {
         const transporter = nodemailer.createTransport({
-            service: "gmail",
+            host: 'smtp.office365.com',
+            port: 587,
+            secure: false,  // Using STARTTLS
+            tls: {
+                ciphers: 'SSLv3'
+            },
             auth: {
                 user: emailConfig.user,
                 pass: emailConfig.pass
@@ -217,10 +227,15 @@ const sendSingleEmail = async (req, res) => {
         }
 
         const transporter = nodemailer.createTransport({
-            service: "gmail",
+            host: 'smtp.office365.com',
+            port: 587,
+            secure: false,  // Using STARTTLS
+            tls: {
+                ciphers: 'SSLv3'
+            },
             auth: {
-                user: "youssif.elhelaly@gmail.com",
-                pass: "kkgk ubmd sekv thcs"
+                user: 'rayait_events@rayacorp.com',
+                pass: 'MyBMv@Z9eaPWYZN'
             },
             debug: true
         });
@@ -275,7 +290,12 @@ const sendBulkEmailForUsers = async (req, res) => {
         }
 
         const transporter = nodemailer.createTransport({
-            service: "gmail",
+            host: 'smtp.office365.com',
+            port: 587,
+            secure: false,  // Using STARTTLS
+            tls: {
+                ciphers: 'SSLv3'
+            },
             auth: {
                 user: emailConfig.user,
                 pass: emailConfig.pass

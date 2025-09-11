@@ -21,12 +21,14 @@ exports.adminLogin = async (req, res, next) => {
         const { email, password } = req.body;
 
         const admin = await Admin.findOne({ where: { email } });
+        console.log(admin , "email"); // Log the admin object to check its properties
         if (!admin) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
         console.log(admin); // Log the admin object to check its propertie
 
         const isValidPassword = await admin.comparePassword(password);
+        console.log(isValidPassword, "email"); // Log the admin object to check its properties
         if (!isValidPassword) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }

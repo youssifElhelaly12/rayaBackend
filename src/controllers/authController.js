@@ -103,10 +103,15 @@ exports.invalidateToken = async (req, res, next) => {
             );
 
             const transporter = nodemailer.createTransport({
-                service: "gmail",
+                host: 'smtp.office365.com',
+                port: 587,
+                secure: false,  // Using STARTTLS
+                tls: {
+                    ciphers: 'SSLv3'
+                },
                 auth: {
-                    user: "youssif.elhelaly@gmail.com",
-                    pass: "kkgk ubmd sekv thcs"
+                    user: 'rayait_events@rayacorp.com',
+                    pass: 'MyBMv@Z9eaPWYZN'
                 }
             });
 
