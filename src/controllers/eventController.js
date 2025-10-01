@@ -88,7 +88,6 @@ module.exports = {
 
   getAllEvents: async (req, res) => {
     try {
-      const events = await Event.findAll({
       const page = Math.max(parseInt(req.query.page) || 1, 1);
       const limit = req.query.limit === 'all' ? null : Math.max(parseInt(req.query.limit) || 10, 1);
       const offset = limit ? (page - 1) * limit : null;
