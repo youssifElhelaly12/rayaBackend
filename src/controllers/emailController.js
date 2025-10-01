@@ -350,6 +350,8 @@ const sendBulkEmailForUsers = async (req, res) => {
 
             } catch (error) {
                 console.error(`Error sending email to user ${user.email}:`, error);
+                res.status(500).json({ error: 'error sending email' });
+
             }
         }
 

@@ -10,6 +10,20 @@ const {
   UserAnswer,
 } = require('../models/associations');
 const { stringify } = require('csv-stringify');
+const { Op } = require('sequelize');
+function formatResponse(rows, count, page = 1, limit = null) {
+  const perPage = limit || count;
+  const totalPages = limit ? Math.max(1, Math.ceil(count / limit)) : 1;
+  const currentPage = limit ? page : 1;
+
+  return {
+    totalItems: count,
+    totalPages,
+    currentPage,
+    perPage,
+    data: rows,
+  };
+}
 
 // Set up storage for uploaded images
 const storage = multer.diskStorage({
@@ -39,32 +53,15 @@ module.exports = {
 
   createEvent: async (req, res) => {
     try {
-      const {
-        eventName,
-        eventPage,
-        apologizeContent,
-        acceptedContent,
-        eventEmailTemplate,
-        verifiedEmailTemplate,
-        invitationSubject,
-        verifySubject,
-        idImage,
-      } = req.body;
+      const { eventName, eventPage, apologizeContent, acceptedContent, eventEmailTemplate,
+        verifiedEmailTemplate, invitationSubject, verifySubject, idImage } = req.body;
 
       let eventBannerImage = null;
-      if (req.file) {
-        eventBannerImage = `/uploads/${req.file.filename}`;
-      }
+      if (req.file) eventBannerImage = `/uploads/${req.file.filename}`;
 
       const event = await Event.create({
-        eventName,
-        eventPage,
-        eventBannerImage,
-        apologizeContent,
-        acceptedContent,
-        invitationSubject,
-        verifySubject,
-        idImage,
+        eventName, eventPage, eventBannerImage, apologizeContent,
+        acceptedContent, invitationSubject, verifySubject, idImage
       });
 
       if (eventEmailTemplate) {
@@ -74,7 +71,6 @@ module.exports = {
           designTemplate: eventEmailTemplate.designTemplate || null,
         });
       }
-
       if (verifiedEmailTemplate) {
         await VerifiedEmailTemplate.create({
           EventId: event.id,
@@ -83,12 +79,8 @@ module.exports = {
         });
       }
 
-      res.status(201).json(formatEventImage(event));
+      res.status(201).json(formatResponse([formatEventImage(event)], 1, 1, 1));
     } catch (error) {
-      if (error.name === 'SequelizeValidationError') {
-        const errors = error.errors.map((err) => err.message);
-        return res.status(400).json({ message: 'Validation error', errors });
-      }
       console.error('Error creating event:', error);
       res.status(500).json({ message: error.message });
     }
@@ -97,14 +89,68 @@ module.exports = {
   getAllEvents: async (req, res) => {
     try {
       const events = await Event.findAll({
+      const page = Math.max(parseInt(req.query.page) || 1, 1);
+      const limit = req.query.limit === 'all' ? null : Math.max(parseInt(req.query.limit) || 10, 1);
+      const offset = limit ? (page - 1) * limit : null;
+
+      const { count, rows: events } = await Event.findAndCountAll({
+        limit: limit || undefined,
+        offset: offset || undefined,
         order: [['createdAt', 'DESC']],
         include: [{ model: EventEmailTemplate }, { model: VerifiedEmailTemplate }],
       });
 
       const eventsWithFullImageUrl = events.map(formatEventImage);
-      res.status(200).json(eventsWithFullImageUrl);
+      res.status(200).json(formatResponse(eventsWithFullImageUrl, count, page, limit));
     } catch (error) {
       console.error('Error fetching events:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
+
+  getEventById: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const event = await Event.findByPk(id, {
+        include: [
+          { model: EventEmailTemplate },
+          { model: VerifiedEmailTemplate },
+          { model: Question, as: 'questions' },
+        ],
+      });
+      if (!event) {
+        return res.status(404).json({ message: 'Event not found' });
+      }
+      res.status(200).json(formatResponse([formatEventImage(event)], 1, 1, 1));
+    } catch (error) {
+      console.error('Error fetching event by ID:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
+
+  searchEventsByName: async (req, res) => {
+    try {
+      const { name } = req.query;
+      if (!name) {
+        return res.status(400).json({ message: 'Event name query parameter is required' });
+      }
+
+      const page = Math.max(parseInt(req.query.page) || 1, 1);
+      const limit = req.query.limit === 'all' ? null : Math.max(parseInt(req.query.limit) || 10, 1);
+      const offset = limit ? (page - 1) * limit : null;
+
+      const { count, rows: events } = await Event.findAndCountAll({
+        where: { eventName: { [Op.like]: `%${name}%` } },
+        limit: limit || undefined,
+        offset: offset || undefined,
+        order: [['createdAt', 'DESC']],
+        include: [{ model: EventEmailTemplate }, { model: VerifiedEmailTemplate }],
+      });
+
+      const eventsWithFullImageUrl = events.map(formatEventImage);
+      res.status(200).json(formatResponse(eventsWithFullImageUrl, count, page, limit));
+    } catch (error) {
+      console.error('Error searching events by name:', error);
       res.status(500).json({ message: 'Internal server error' });
     }
   },
@@ -201,25 +247,7 @@ module.exports = {
     }
   },
 
-  getEventById: async (req, res) => {
-    try {
-      const { id } = req.params;
-      const event = await Event.findByPk(id, {
-        include: [
-          { model: EventEmailTemplate },
-          { model: VerifiedEmailTemplate },
-          { model: Question, as: 'questions' },
-        ],
-      });
-      if (!event) {
-        return res.status(404).json({ message: 'Event not found' });
-      }
-      res.status(200).json(formatEventImage(event));
-    } catch (error) {
-      console.error('Error fetching event by ID:', error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
-  },
+  
 
   exportEventData: async (req, res) => {
     try {
