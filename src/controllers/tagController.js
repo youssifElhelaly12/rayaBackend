@@ -1,70 +1,167 @@
 const { Tag, User } = require('../models/associations');
 
+const { Op } = require("sequelize");
+function formatResponse(rows, count, page = 1, limit = null) {
+    const perPage = limit || count;
+    const totalPages = limit ? Math.max(1, Math.ceil(count / limit)) : 1;
+    const currentPage = limit ? page : 1;
+
+    return {
+        totalItems: count,
+        totalPages,
+        currentPage,
+        perPage,
+        data: rows,
+    };
+  }
+/**
+ * @swagger
+ * tags:
+ *   name: Tags
+ *   description: API for managing tags
+ */
+
+// ============================= CREATE TAG =============================
+/**
+ * @swagger
+ * /api/tags:
+ *   post:
+ *     summary: Create a new tag
+ *     tags: [Tags]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - tagName
+ *             properties:
+ *               tagName:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Tag created successfully
+ *       400:
+ *         description: Tag already exists
+ */
 exports.createTag = async (req, res) => {
     try {
         const { tagName } = req.body;
-        const tag = await Tag.create({
-            tagName: tagName
-        });
-        res.status(201).json(tag);
+        const tag = await Tag.create({ tagName });
+        return res.status(201).json(formatResponse([tag], 1, 1, 1));
     } catch (error) {
-       
-        res.status(400).json({ error: "tag name is already exist" });
+        return res.status(400).json({ error: "Tag name already exists" });
     }
 };
 
+// ============================= GET ALL TAGS =============================
+/**
+ * @swagger
+ * /api/tags:
+ *   get:
+ *     summary: Get all tags (paginated)
+ *     tags: [Tags]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: string
+ *         description: Items per page (or 'all')
+ *     responses:
+ *       200:
+ *         description: List of tags
+ */
 exports.getTags = async (req, res) => {
     try {
-        const tags = await Tag.findAll({
-            include: [{ model: User, as: 'users', through: { attributes: [] } }]
+        let { page = 1, limit = 10 } = req.query;
+        page = parseInt(page);
+        limit = limit === "all" ? null : parseInt(limit);
+
+        const { count, rows } = await Tag.findAndCountAll({
+            include: [{ model: User, as: 'users', through: { attributes: [] } }],
+            offset: limit ? (page - 1) * limit : undefined,
+            limit: limit || undefined,
+            distinct: true
         });
-        res.status(200).json(tags);
+
+        return res.status(200).json(formatResponse(rows, count, page, limit));
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: error.message });
     }
 };
 
+// ============================= SEARCH TAGS =============================
+/**
+ * @swagger
+ * /api/tags/search:
+ *   get:
+ *     summary: Search tags by name
+ *     tags: [Tags]
+ *     parameters:
+ *       - in: query
+ *         name: tagName
+ *         schema:
+ *           type: string
+ *         description: Name to search for
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: string
+ *         description: Items per page (or 'all')
+ *     responses:
+ *       200:
+ *         description: List of matching tags
+ */
+exports.searchTags = async (req, res) => {
+    try {
+        let { tagName = "", page = 1, limit = 10 } = req.query;
+        page = parseInt(page);
+        limit = limit === "all" ? null : parseInt(limit);
+
+        const { count, rows } = await Tag.findAndCountAll({
+            where: { tagName: { [Op.iLike]: `%${tagName}%` } },
+            include: [{ model: User, as: 'users', through: { attributes: [] } }],
+            offset: limit ? (page - 1) * limit : undefined,
+            limit: limit || undefined,
+            distinct: true
+        });
+
+        return res.status(200).json(formatResponse(rows, count, page, limit));
+    } catch (error) {
+        console.error("Error searching tags:", error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+// ============================= GET TAG BY ID =============================
 /**
  * @swagger
  * /api/tags/{id}:
  *   get:
  *     summary: Get a single tag by ID
- *     tags:
- *       - Tags
+ *     tags: [Tags]
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
- *         description: Numeric ID of the tag to retrieve
  *         schema:
  *           type: integer
  *     responses:
  *       200:
- *         description: A single tag object with associated users
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/TagWithUsers'
+ *         description: Tag with associated users
  *       404:
  *         description: Tag not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Tag not found
- *       500:
- *         description: Server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                   example: Internal server error
  */
 exports.getTagDetails = async (req, res) => {
     try {
@@ -75,13 +172,41 @@ exports.getTagDetails = async (req, res) => {
         if (!tag) {
             return res.status(404).json({ message: 'Tag not found' });
         }
-        res.status(200).json(tag);
+        return res.status(200).json(formatResponse([tag], 1, 1, 1));
     } catch (error) {
         console.error('Error fetching tag details:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: 'Internal server error' });
     }
 };
 
+// ============================= UPDATE TAG =============================
+/**
+ * @swagger
+ * /api/tags/{id}:
+ *   put:
+ *     summary: Update a tag
+ *     tags: [Tags]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               tagName:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Tag updated successfully
+ *       404:
+ *         description: Tag not found
+ */
 exports.updateTag = async (req, res) => {
     try {
         const { id } = req.params;
@@ -92,12 +217,31 @@ exports.updateTag = async (req, res) => {
         }
         tag.tagName = tagName;
         await tag.save();
-        res.status(200).json(tag);
+        return res.status(200).json(formatResponse([tag], 1, 1, 1));
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        return res.status(400).json({ error: error.message });
     }
 };
 
+// ============================= DELETE TAG =============================
+/**
+ * @swagger
+ * /api/tags/{id}:
+ *   delete:
+ *     summary: Delete a tag
+ *     tags: [Tags]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Tag deleted successfully
+ *       404:
+ *         description: Tag not found
+ */
 exports.deleteTag = async (req, res) => {
     try {
         const { id } = req.params;
@@ -105,11 +249,8 @@ exports.deleteTag = async (req, res) => {
         if (!tag) {
             return res.status(404).json({ message: 'Tag not found' });
         }
-
-        // Remove associations with users first (through table), then delete the tag
         await tag.setUsers([]);
         await tag.destroy();
-
         return res.status(200).json({ message: 'Tag deleted successfully' });
     } catch (error) {
         console.error('Error deleting tag:', error);
@@ -117,83 +258,20 @@ exports.deleteTag = async (req, res) => {
     }
 };
 
+// ============================= ADD USERS TO TAG =============================
 /**
  * @swagger
  * /api/tags/{tagId}/users:
  *   post:
  *     summary: Add one or more users to a tag
- *     tags:
- *       - Tags
- *     parameters:
- *       - in: path
- *         name: tagId
- *         required: true
- *         description: Numeric ID of the tag
- *         schema:
- *           type: integer
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - userIds
- *             properties:
- *               userIds:
- *                 type: array
- *                 items:
- *                   type: integer
- *                 description: An array of user IDs to add to the tag
- *                 example: [1, 2, 3]
- *     responses:
- *       200: 
- *         description: Users successfully added to the tag
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Users added to tag successfully
- *       400:
- *         description: Invalid input or tag/users not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Tag ID and user IDs are required
- *       404:
- *         description: Tag or one or more users not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Tag not found or some users do not exist
- *       500:
- *         description: Server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
- *                   example: Internal server error
+ *     tags: [Tags]
  */
 exports.addUsersToTag = async (req, res) => {
     try {
         const { tagId } = req.params;
         const { userIds } = req.body;
 
-        if (!tagId || !userIds || !Array.isArray(userIds) || userIds.length === 0) {
+        if (!tagId || !Array.isArray(userIds) || userIds.length === 0) {
             return res.status(400).json({ message: 'Tag ID and an array of user IDs are required.' });
         }
 
@@ -208,14 +286,21 @@ exports.addUsersToTag = async (req, res) => {
         }
 
         await tag.addUsers(users);
-
-        res.status(200).json({ message: 'Users added to tag successfully.' });
+        return res.status(200).json({ message: 'Users added to tag successfully.' });
     } catch (error) {
         console.error('Error adding users to tag:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ error: 'Internal server error' });
     }
 };
 
+// ============================= REMOVE USER FROM TAG =============================
+/**
+ * @swagger
+ * /api/tags/{tagId}/users/{userId}:
+ *   delete:
+ *     summary: Remove a user from a tag
+ *     tags: [Tags]
+ */
 exports.removeUserFromTag = async (req, res) => {
     try {
         const { tagId, userId } = req.params;
@@ -231,7 +316,6 @@ exports.removeUserFromTag = async (req, res) => {
         }
 
         await tag.removeUser(user);
-
         return res.status(200).json({ message: 'User removed from tag successfully' });
     } catch (error) {
         console.error('Error removing user from tag:', error);
